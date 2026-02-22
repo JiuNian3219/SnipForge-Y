@@ -67,6 +67,7 @@ const handleChoice = (choice: 'skip' | 'replace') => {
   justify-content: center;
   z-index: 10000;
   padding: 20px;
+  -webkit-app-region: no-drag;
 }
 
 .modal-content {

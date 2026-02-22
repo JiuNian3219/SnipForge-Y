@@ -8,6 +8,10 @@ import * as db from './database'
 
 // Track app quitting state
 let isAppQuiting = false
+
+// SECURITY: Track file paths approved via native dialogs
+// Only paths chosen by the user through save/open dialogs are allowed for read/write
+const approvedFilePaths = new Set<string>()
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -62,17 +66,21 @@ async function showWindow() {
   // Only center window if it's the first time showing or if it's off-screen
   const currentBounds = win.getBounds()
   const { screen } = require('electron')
-  const primaryDisplay = screen.getPrimaryDisplay()
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
 
-  // Check if window is completely off-screen
-  const isOffScreen = currentBounds.x < 0 ||
-                     currentBounds.y < 0 ||
-                     currentBounds.x > screenWidth ||
-                     currentBounds.y > screenHeight
+  // Check all displays, not just primary (handles disconnected monitors)
+  const displays = screen.getAllDisplays()
+  const isOnAnyDisplay = displays.some((display: Electron.Display) => {
+    const { x, y, width, height } = display.workArea
+    return currentBounds.x < x + width &&
+           currentBounds.x + currentBounds.width > x &&
+           currentBounds.y < y + height &&
+           currentBounds.y + currentBounds.height > y
+  })
 
-  if (isOffScreen) {
-    // Only center if off-screen, preserve size
+  if (!isOnAnyDisplay) {
+    // Center on primary display, preserve size
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
     const windowWidth = currentBounds.width || 800
     const windowHeight = currentBounds.height || 600
     const x = Math.round((screenWidth - windowWidth) / 2)
@@ -171,7 +179,7 @@ async function createWindow() {
   }
 
   // Test actively push message to the Electron-Renderer
-  win.webContents.on('did-finish-load', () => {
+  win.webContents.once('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString())
   })
 
@@ -252,6 +260,17 @@ function createTray() {
   console.log('✅ System tray icon created')
 }
 
+// SECURITY: Validate command objects before database operations
+function isValidCommandUpdate(obj: unknown): obj is Partial<db.Command> {
+  if (typeof obj !== 'object' || obj === null) return false
+  const allowed = ['title', 'body', 'description', 'tags', 'language']
+  for (const key of Object.keys(obj)) {
+    if (!allowed.includes(key)) return false
+    if (typeof (obj as Record<string, unknown>)[key] !== 'string') return false
+  }
+  return true
+}
+
 // IPC handlers for database operations
 ipcMain.handle('db:getAllCommands', async () => {
   try {
@@ -263,6 +282,9 @@ ipcMain.handle('db:getAllCommands', async () => {
 })
 // update command
 ipcMain.handle('db:updateCommand', async (_, id: number, updates: Partial<db.Command>) => {
+  if (typeof id !== 'number' || !isValidCommandUpdate(updates)) {
+    return { success: false, error: 'Invalid parameters' }
+  }
   try {
     const success = db.updateCommand(id, updates)
     if (success) {
@@ -279,6 +301,9 @@ ipcMain.handle('db:updateCommand', async (_, id: number, updates: Partial<db.Com
 })
 // delete command
 ipcMain.handle('db:deleteCommand', async (_, id: number) => {
+  if (typeof id !== 'number') {
+    return { success: false, error: 'Invalid ID' }
+  }
   try {
     const success = db.deleteCommand(id)
     if (success) {
@@ -295,6 +320,9 @@ ipcMain.handle('db:deleteCommand', async (_, id: number) => {
 })
 // add command
 ipcMain.handle('db:addCommand', async (_, command: any) => {
+  if (!isValidCommandUpdate(command) || typeof command.title !== 'string' || typeof command.body !== 'string') {
+    return { success: false, error: 'Invalid command data' }
+  }
   try {
     const newId = db.addCommand(command)
     console.log('Command added successfully with ID:', newId)
@@ -362,10 +390,9 @@ ipcMain.handle('file:saveDialog', async (_, defaultFilename: string) => {
       ]
     })
 
-    return {
-      success: !result.canceled,
-      filePath: result.filePath || null
-    }
+    const filePath = result.filePath || null
+    if (filePath) approvedFilePaths.add(filePath)
+    return { success: !result.canceled, filePath }
   } catch (error) {
     console.error('Error showing save dialog:', error)
     return { success: false, filePath: null }
@@ -385,10 +412,9 @@ ipcMain.handle('file:openDialog', async () => {
       properties: ['openFile']
     })
 
-    return {
-      success: !result.canceled,
-      filePath: result.filePaths[0] || null
-    }
+    const filePath = result.filePaths[0] || null
+    if (filePath) approvedFilePaths.add(filePath)
+    return { success: !result.canceled, filePath }
   } catch (error) {
     console.error('Error showing open dialog:', error)
     return { success: false, filePath: null }
@@ -396,9 +422,15 @@ ipcMain.handle('file:openDialog', async () => {
 })
 
 // IPC handlers for file read/write operations
+// SECURITY: Only allow paths that were approved via native dialog
 ipcMain.handle('file:writeFile', async (_, filePath: string, content: string) => {
+  if (!approvedFilePaths.has(filePath)) {
+    console.error('SECURITY: Blocked write to unapproved path:', filePath)
+    return { success: false, error: 'File path not approved via dialog' }
+  }
   try {
     await fs.writeFile(filePath, content, 'utf8')
+    approvedFilePaths.delete(filePath) // Single-use approval
     console.log('File written successfully:', filePath)
     return { success: true }
   } catch (error) {
@@ -408,8 +440,13 @@ ipcMain.handle('file:writeFile', async (_, filePath: string, content: string) =>
 })
 
 ipcMain.handle('file:readFile', async (_, filePath: string) => {
+  if (!approvedFilePaths.has(filePath)) {
+    console.error('SECURITY: Blocked read from unapproved path:', filePath)
+    return { success: false, error: 'File path not approved via dialog' }
+  }
   try {
     const content = await fs.readFile(filePath, 'utf8')
+    approvedFilePaths.delete(filePath) // Single-use approval
     console.log('File read successfully:', filePath)
     return { success: true, content }
   } catch (error) {
@@ -446,7 +483,12 @@ ipcMain.handle('dialog:showInputDialog', async (_,title: string, label: string,d
 })
 
 // IPC handler for opening external URLs in system browser
+// SECURITY: Only allow https: URLs to prevent arbitrary protocol execution
 ipcMain.handle('shell:openExternal', async (_, url: string) => {
+  if (typeof url !== 'string' || !url.startsWith('https:')) {
+    console.error('SECURITY: Blocked non-https URL:', url)
+    throw new Error('Only HTTPS URLs are allowed')
+  }
   try {
     await shell.openExternal(url)
     console.log('Opened external URL:', url)
@@ -504,9 +546,13 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
-  // Unregister all global shortcuts
   globalShortcut.unregisterAll()
-  console.log('🧹 Global shortcuts unregistered')
+  db.closeDatabase()
+  if (tray) {
+    tray.destroy()
+    tray = null
+  }
+  console.log('Cleanup complete: shortcuts, database, tray')
 })
 
 app.on('before-quit', () => {

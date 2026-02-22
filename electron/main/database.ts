@@ -23,6 +23,8 @@ export function initializeDatabase() {
 try {
     //create or open the database
     db = new Database(dbPath)
+    // Enable WAL mode for better read performance
+    db.pragma('journal_mode = WAL')
     // Create the commands table if it doesn't exist
     db.exec(`
         CREATE TABLE IF NOT EXISTS commands (
@@ -66,6 +68,15 @@ try {
         throw error
     }
 }
+// Close the database connection
+export function closeDatabase(): void {
+    if (db) {
+        db.close()
+        db = null
+        console.log('Database closed')
+    }
+}
+
 // Function to get all commands from DB
 export function getAllCommands(): Command[] {
     if (!db) throw new Error("Database not initialized");

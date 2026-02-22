@@ -954,6 +954,11 @@ watch(commands, () => {
   descriptionTooltipCache.clear()
 })
 
+// Clear command selection when tag filters change (filtering = new search)
+watch(selectedTags, () => {
+  selectedCommandId.value = null
+})
+
 // Open description modal
 const openDescriptionModal = (title: string, description: string) => {
   descriptionModalTitle.value = title
@@ -990,7 +995,7 @@ const openDescriptionModal = (title: string, description: string) => {
           />
           <button
             @click="toggleFilterDropdown"
-            class="filter-button"
+            :class="['filter-button', { active: selectedTags.length > 0, open: showFilterDropdown }]"
             title="Filter by tags"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1293,6 +1298,12 @@ html, body, #app {
   transition: all 0.2s;
   border: 1px solid #3e3e3e;
   -webkit-app-region: no-drag;
+  outline: none;
+}
+
+.filter-button:focus-visible,
+.filter-button.open {
+  border-color: #ec5002ee;
 }
 
 .filter-button:hover {
@@ -1435,8 +1446,8 @@ html, body, #app {
 .help-button,
 .settings-button {
   background: none;
-  border: none;
-  padding: 8px;
+  border: 1px solid transparent;
+  padding: 7px;
   cursor: pointer;
   color: #ec5002ee;
   transition: all 0.2s;
@@ -1447,6 +1458,13 @@ html, body, #app {
   width: 32px;
   height: 32px;
   -webkit-app-region: no-drag;
+  outline: none;
+}
+
+.add-button:focus-visible,
+.help-button:focus-visible,
+.settings-button:focus-visible {
+  border-color: #ec5002ee;
 }
 
 .add-button:hover,
@@ -1645,6 +1663,7 @@ html, body, #app {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  -webkit-app-region: no-drag;
 }
 
 .modal-content {
