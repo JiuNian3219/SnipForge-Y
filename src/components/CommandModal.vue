@@ -20,23 +20,26 @@
                 <div class="form-group">
                     <div class="field-header">
                         <label for="body">Command:</label>
-                        <select v-model="formData.language" class="language-selector">
-                            <option value="plaintext">Plain Text</option>
-                            <option value="richtext">Rich Text</option>
-                            <option value="markdown">Markdown</option>
-                            <option value="yaml">YAML</option>
-                            <option value="javascript">JavaScript</option>
-                            <option value="typescript">TypeScript</option>
-                            <option value="python">Python</option>
-                            <option value="html">HTML</option>
-                            <option value="css">CSS</option>
-                            <option value="bash">Bash</option>
-                            <option value="json">JSON</option>
-                            <option value="sql">SQL</option>
-                            <option value="go">Go</option>
-                            <option value="rust">Rust</option>
-                            <option value="java">Java</option>
-                        </select>
+                        <div class="language-dropdown" ref="languageDropdownRef">
+                            <button
+                                type="button"
+                                class="language-trigger"
+                                @click="languageOpen = !languageOpen"
+                            >
+                                {{ languageLabels[formData.language] || formData.language }}
+                                <span class="chevron" :class="{ open: languageOpen }">&#9662;</span>
+                            </button>
+                            <ul v-if="languageOpen" class="language-options">
+                                <li
+                                    v-for="opt in languageOptions"
+                                    :key="opt.value"
+                                    :class="{ selected: formData.language === opt.value }"
+                                    @click="selectLanguage(opt.value)"
+                                >
+                                    {{ opt.label }}
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                     <!-- Code editor for programming languages -->
                     <CodeEditor
@@ -113,7 +116,7 @@
     </div>
 </template>
 <script setup lang="ts">
-  import { ref, watch, nextTick, computed } from 'vue'
+  import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
   import { getAllTags } from '../utils/tags'
   import { getInlineSuggestion } from '../utils/autocomplete'
   import CodeEditor from './CodeEditor.vue'
@@ -157,6 +160,44 @@
   const tagsInput = ref('')
   const titleInput = ref<HTMLInputElement>()
   const tagsInputRef = ref<HTMLInputElement>()
+
+  // Custom language dropdown
+  const languageOpen = ref(false)
+  const languageDropdownRef = ref<HTMLElement>()
+
+  const languageOptions = [
+    { value: 'plaintext', label: 'Plain Text' },
+    { value: 'richtext', label: 'Rich Text' },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'yaml', label: 'YAML' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'python', label: 'Python' },
+    { value: 'html', label: 'HTML' },
+    { value: 'css', label: 'CSS' },
+    { value: 'bash', label: 'Bash' },
+    { value: 'json', label: 'JSON' },
+    { value: 'sql', label: 'SQL' },
+    { value: 'go', label: 'Go' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'java', label: 'Java' },
+  ]
+
+  const languageLabels = Object.fromEntries(languageOptions.map(o => [o.value, o.label]))
+
+  const selectLanguage = (value: string) => {
+    formData.value.language = value
+    languageOpen.value = false
+  }
+
+  const onClickOutsideDropdown = (e: MouseEvent) => {
+    if (languageDropdownRef.value && !languageDropdownRef.value.contains(e.target as Node)) {
+      languageOpen.value = false
+    }
+  }
+
+  onMounted(() => document.addEventListener('click', onClickOutsideDropdown))
+  onUnmounted(() => document.removeEventListener('click', onClickOutsideDropdown))
 
   // Helper to determine editor type
   const isCodeLanguage = (language: string): boolean => {
@@ -204,6 +245,7 @@
         titleInput.value?.focus()
       })
     } else {
+      languageOpen.value = false
       // Modal is closing - clear form data for add mode to prevent persistence
       if (props.mode === 'add') {
         formData.value = { title: '', body: '', description: '', language: 'plaintext' }
@@ -340,7 +382,11 @@
     gap: 8px;
   }
 
-  .language-selector {
+  .language-dropdown {
+    position: relative;
+  }
+
+  .language-trigger {
     background-color: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -349,20 +395,64 @@
     font-size: 11px;
     cursor: pointer;
     transition: all 0.2s;
-    min-width: auto;
-    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
-  .language-selector:hover {
+  .language-trigger:hover {
     background-color: var(--bg-surface);
     border-color: var(--accent);
     color: var(--text-primary);
   }
 
-  .language-selector:focus-visible {
+  .language-trigger:focus-visible {
     outline: none;
     border-color: var(--accent);
     color: var(--text-primary);
+  }
+
+  .chevron {
+    font-size: 9px;
+    transition: transform 0.2s;
+  }
+
+  .chevron.open {
+    transform: rotate(180deg);
+  }
+
+  .language-options {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 0;
+    list-style: none;
+    min-width: 140px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 10;
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  .language-options li {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .language-options li:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .language-options li.selected {
+    color: var(--accent);
   }
 
   .markdown-content {
