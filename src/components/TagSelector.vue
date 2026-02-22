@@ -5,6 +5,16 @@
       <button @click="$emit('clear-all')" class="clear-all-btn">Clear All</button>
     </div>
 
+    <div class="tag-search">
+      <input
+        ref="searchInputRef"
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search tags..."
+        class="tag-search-input"
+      />
+    </div>
+
     <VList
       v-if="sortedTags.length > 0"
       class="tag-list"
@@ -23,13 +33,13 @@
     </VList>
 
     <div v-else class="empty-state">
-      No tags available
+      {{ searchQuery ? 'No matching tags' : 'No tags available' }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { VList } from 'virtua/vue'
 
 interface Props {
@@ -47,8 +57,19 @@ defineEmits<{
   'clear-all': []
 }>()
 
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  nextTick(() => searchInputRef.value?.focus())
+})
+
 const sortedTags = computed(() => {
-  return [...props.availableTags].sort()
+  const query = searchQuery.value.toLowerCase()
+  const filtered = query
+    ? props.availableTags.filter(tag => tag.toLowerCase().includes(query))
+    : props.availableTags
+  return [...filtered].sort()
 })
 
 const isSelected = (tag: string): boolean => {
@@ -94,6 +115,32 @@ const isSelected = (tag: string): boolean => {
 
 .clear-all-btn:hover {
   background: #505050;
+}
+
+.tag-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid #404040;
+  flex-shrink: 0;
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background: #1e1e1e;
+  color: #e3e3e3;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.tag-search-input:focus {
+  border-color: #ec5002ee;
+}
+
+.tag-search-input::placeholder {
+  color: #888;
 }
 
 .tag-list {

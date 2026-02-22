@@ -40,7 +40,7 @@
             <div class="controls-row">
               <!-- Bulk Selection with Filter Button -->
               <div class="bulk-selection">
-                <button @click.stop="toggleManagementFilterDropdown" class="management-filter-button" title="Filter by tags">
+                <button @click.stop="toggleManagementFilterDropdown" :class="['management-filter-button', { active: selectedManagementTags.length > 0 }]" title="Filter by tags">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
                   </svg>
@@ -855,6 +855,12 @@ const handleBulkExport = () => {
 .management-filter-button:hover {
   background: #3a3a3a;
   color: #ffffff;
+}
+
+.management-filter-button.active {
+  background: #ec5002ee;
+  color: #ffffff;
+  border-color: #ec5002ee;
 }
 
 .filter-dropdown {
