@@ -327,19 +327,23 @@ export async function subscribeToLibrary(repoUrl: string): Promise<{ library: Li
     // Create the library record
     const libraryId = db.addLibrary(githubRepo, manifest.name, manifest.description)
 
-    // Insert all commands in a batch
-    const toAdd = commands.map(({ path, command }) => ({
-        remotePath: path,
-        command: {
-            title: command.title,
-            body: command.body,
-            description: command.description || '',
-            tags: JSON.stringify(command.tags || []),
-            language: command.language || 'plaintext',
-            created_at: command.created_at || new Date().toISOString(),
-            updated_at: command.updated_at || new Date().toISOString(),
-        }
-    }))
+    // Body dedup: skip remote commands whose body already exists locally
+    const localBodies = db.getLocalCommandBodies()
+
+    const toAdd = commands
+        .filter(({ command }) => !localBodies.has(command.body.trim()))
+        .map(({ path, command }) => ({
+            remotePath: path,
+            command: {
+                title: command.title,
+                body: command.body,
+                description: command.description || '',
+                tags: JSON.stringify(command.tags || []),
+                language: command.language || 'plaintext',
+                created_at: command.created_at || new Date().toISOString(),
+                updated_at: command.updated_at || new Date().toISOString(),
+            }
+        }))
 
     const syncResult = db.syncRemoteCommands(libraryId, sha, toAdd, [], [])
 
@@ -375,9 +379,15 @@ export async function syncLibrary(libraryId: number, force = false): Promise<Syn
     const toUpdate: Array<{ remotePath: string; command: { title: string; body: string; description: string; tags: string; language: string; updated_at: string } }> = []
     const toRemove: string[] = []
 
+    // Body dedup: skip remote commands whose body already exists locally
+    const localBodies = db.getLocalCommandBodies()
+
     for (const { path, command } of remoteCommands) {
         const local = localByPath.get(path)
         if (!local) {
+            // Skip if a local command already has the same body
+            if (localBodies.has(command.body.trim())) continue
+
             // New command
             toAdd.push({
                 remotePath: path,

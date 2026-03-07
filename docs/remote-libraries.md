@@ -264,18 +264,19 @@ Auth + subscribe + pull + sync + unsubscribe. The core flow works end to end.
 - [x] Visual distinction between local and remote commands in the main list
 - [x] Source indicators on command cards (library name/badge)
 - [x] Editing a remote command detaches it — becomes local ("you touched it, it's yours now")
-- [ ] Sync body-deduplication — skip remote commands that match an existing local command body (see [#1](https://github.com/ArtluxDM/SnipForge/issues/1))
+- [x] Sync body-deduplication — skip remote commands that match an existing local command body (see [#1](https://github.com/ArtluxDM/SnipForge/issues/1))
 - ~~Filter commands by source/library~~ — existing search + tag filters already cover this
 - ~~Exclude remote commands from local export~~ — not needed, exports are from whatever you're working with
 - ~~Protect remote commands from edit/delete~~ — replaced by detach-on-edit philosophy
 
 **Implementation notes:**
 - Detach-on-edit: `database.ts:updateCommand()` now sets `source = 'local'`, `library_id = NULL`, `remote_path = NULL` on every update. Next sync re-adds the remote original as a separate entry.
+- Body dedup: `database.ts:getLocalCommandBodies()` returns a Set of trimmed bodies from local commands. Both `subscribeToLibrary()` and `syncLibrary()` check this Set before adding — if a remote command's trimmed body matches any local command, it's skipped.
 
 **Verification:**
 1. Subscribe to 2+ libraries → commands from each show source label
 2. Edit a remote command → it becomes local, next sync re-adds the remote original
-3. Subscribe to a library when you already have matching commands locally → no duplicates created (pending #1)
+3. Subscribe to a library when you already have matching commands locally → no duplicates created
 
 #### Phase 3: Publishing (Curator Tools)
 

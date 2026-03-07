@@ -236,6 +236,14 @@ export function deleteLibrary(libraryId: number): void {
 
 // ── Remote command functions ──────────────────────────────────────
 
+export function getLocalCommandBodies(): Set<string> {
+    if (!db) throw new Error("Database not initialized")
+    const rows = db.prepare(
+        "SELECT body FROM commands WHERE source = 'local'"
+    ).all() as Array<{ body: string }>
+    return new Set(rows.map(r => r.body.trim()))
+}
+
 export function getRemoteCommands(libraryId: number): Command[] {
     if (!db) throw new Error("Database not initialized")
     return db.prepare(
