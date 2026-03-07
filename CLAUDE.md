@@ -1,179 +1,95 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is the behavioral guide and knowledge map for Claude Code working on this project. Keep it lean — point to docs, don't duplicate them. Update it when how we work changes, not by appending but by editing.
 
-## Project Overview
+## What This Is
 
-SnipForge is an Electron-based desktop application for saving, searching, and managing command snippets. The app provides a global hotkey-triggered palette for searching commands that can be copied to clipboard.
+SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching, and managing command snippets. Global hotkey opens a palette, you search, you copy. The user is an engineer/human/ai_agent who needs commands/snippets fast — every UX decision serves that.
 
-## Role Definition
+## How We Work
 
-**IMPORTANT:** This is a learning project where the user learns by reviewing and understanding code. Claude's role is as a coding teacher who implements and explains:
+**We are co-developers.** Challenge bad ideas, propose better approaches, make architectural decisions together. No hand-holding, no unnecessary explanations — but when we're in new territory, think out loud so we both learn.
 
-- **DO:** Write implementation code while explaining what you're doing and why, explain concepts and patterns, help debug, suggest improvements to the MVP plan
-- **EXPLAIN:** Before or after writing code, explain the approach, key concepts, and why you made specific choices
-- **BE HONEST:** Challenge bad ideas, point out better approaches, don't just agree with everything
-- **REVIEW PROCESS:** User reviews and approves changes before moving forward
-- **Purpose:** This serves as both a TypeScript learning course and building a practical tool
+**Doc-first workflow:**
+1. Update the feature doc with the plan before writing code
+2. Implement, referencing the GitHub issue in commits (`ref #N` or `fixes #N`)
+3. Update the feature doc with final notes and mark deliverables complete
+4. The feature doc is the source of truth — for the plan, the roadmap, and the dev log
 
-## Setup Commands
+**GitHub Issues** are the work tracking system. Each session starts with an issue, ends with a commit that references it. Issues have acceptance criteria and point to the relevant feature doc.
 
-Based on the MVP plan, the project will use the electron-vite-vue template:
+**User-first mindset.** We're not building code for code's sake. Every feature exists because a person needs it. Think about how functional it is for the end user — that's the driver, not how fancy the implementation is.
 
-```bash
-# Initial setup (if not already done)
-git clone https://github.com/electron-vite/electron-vite-vue.git .
-pnpm install
+**Specialized agents** for recurring tasks that need a different hat (release engineer, reviewer, technical writer). They run as subagents with their own tools and instructions, keeping the main context clean. See `.claude/README.md` for available agents and when to create new ones.
 
-# Development
-pnpm dev        # starts Electron + Vite dev server
+**This file is part of the workflow.** When how we work changes, CLAUDE.md gets updated in the same commit. Don't append endlessly — edit to keep it current.
 
-# Core dependencies
-pnpm add better-sqlite3 lucide-vue-next marked fuse.js highlight.js dompurify virtua
-pnpm add codemirror @codemirror/lang-* @tiptap/vue-3 @tiptap/starter-kit @tiptap/extension-*
-pnpm add -D @types/better-sqlite3 @types/dompurify
+## Tech Stack
 
-# Build
-pnpm build      # production build
-```
-
-## Architecture
-
-**Tech Stack:**
 - Desktop: Electron + Vue 3 + Vite + TypeScript
 - Database: SQLite via better-sqlite3 (synchronous, local storage)
 - Editors: CodeMirror 6 (code/markdown), TipTap (rich text)
 - Search: Fuse.js (fuzzy search with weighted scoring)
-- UI: Lucide icons, Marked for markdown rendering, highlight.js for syntax highlighting
-- Security: DOMPurify for HTML sanitization
+- UI: Lucide icons, Marked + highlight.js, DOMPurify for sanitization
 - Performance: Virtua for virtual scrolling
-- OS Integration: Electron's globalShortcut, clipboard, system tray
+- OS Integration: Electron globalShortcut, clipboard, system tray
+- Remote: GitHub API (Device Flow auth, repo sync for remote libraries)
 
-**Process Architecture:**
-- **Main Process (Electron):** Handles global hotkeys, SQLite database connection, and IPC for clipboard operations
-- **Renderer Process (Vue 3):** Single palette window with search interface, command editor, and settings
+## Architecture
 
-**Data Model:**
-```sql
--- Table: commands
-id INTEGER PRIMARY KEY,
-title TEXT NOT NULL,
-body TEXT NOT NULL,             -- the command/snippet content
-description TEXT DEFAULT '',    -- optional description with markdown support
-tags TEXT DEFAULT '[]',         -- JSON array of strings
-language TEXT DEFAULT 'plaintext', -- editor type: plaintext, richtext, markdown, javascript, python, etc.
-created_at TEXT NOT NULL,
-updated_at TEXT NOT NULL
+- **Main Process:** Global hotkeys, SQLite, IPC, GitHub API operations
+- **Renderer Process:** Single palette window — search, editor, settings
+- **Process boundary:** Long operations in Main, keep Renderer responsive
+- **IPC:** Small, typed channels — not overloaded RPC events
+
+## Feature Docs
+
+Feature documentation lives in `docs/`. These are living documents — plan, implementation notes, and dev log in one place.
+
+| Doc | What | Status |
+|-----|------|--------|
+| `docs/schema.md` | Database schema — tables, columns, migrations, TypeScript types | Living reference |
+| `docs/remote-libraries.md` | Remote Libraries — GitHub sync, publishing, unified library model | Phase 2 nearly complete, Phases 3-5 planned |
+
+## Development
+
+```bash
+pnpm install    # install dependencies
+pnpm dev        # starts Electron + Vite dev server
+pnpm build      # production build
 ```
 
-## Core Features
+### Guidelines
 
-1. **Multiple Editor Types:**
-   - **Plain Text:** Simple text input
-   - **Rich Text:** WYSIWYG editor with formatting, lists, task lists, links, images (TipTap)
-   - **Markdown:** Syntax-highlighted markdown with toolbar (CodeMirror)
-   - **Code:** Syntax highlighting for 15+ languages (JavaScript, TypeScript, Python, Go, Rust, Java, HTML, CSS, YAML, JSON, SQL, Bash, PHP, XML, and more)
-
-2. **Global Hotkey:** Opens search palette (default: Ctrl/Cmd+Shift+Space)
-3. **Text Search:** Real-time search across title, body, and description
-4. **Actions:** Copy to clipboard with variable substitution
-5. **Variables:** Template substitution with `{{variable name}}` syntax and user prompts
-6. **Command Management:** Add, edit, delete commands with descriptions and tagging
-7. **Tag System:** Tag autocomplete and export filtering
-8. **Export/Import:** JSON format with tag filtering options
-9. **Help System:** Built-in markdown help with keyboard shortcuts
-
-## Development Guidelines
-
-- Use strict TypeScript settings (`"strict": true`)
-- Implement small, typed IPC channels rather than overloaded RPC events
+- Strict TypeScript (`"strict": true`)
+- Clipboard-only operations (no keystroke simulation, no auto-execution)
+- Variable substitution with `{{variable name}}` prompts user before copy
 - Store SQLite database in user data directory
-- Maintain separation: long operations in Main process, keep Renderer responsive
-- Use clipboard operations only (no keystroke simulation)
 
-## Commit Guidelines
+### Commit Conventions
 
-- Keep commit messages short and focused on the specific change made
-- Use conventional commit format: `feat:`, `fix:`, `docs:`, `refactor:`
-- Avoid long explanations in commit messages
-- Example: `feat: change export tag filtering from OR to AND logic because is better and it makes it easier to use and this was coded by etc etc etc`
+- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
+- Short, focused messages — what changed and why, not a paragraph
+- Reference GitHub issues: `feat: detach remote commands on edit (fixes #1)`
 
-## Release Process
+### Release Process
 
-### Automated Release (Recommended)
-
-Use the Release Manager Agent for consistent, automated releases. Since this is a Claude subagent (not a slash command), invoke it by asking:
+Use the Release Manager Agent for automated releases:
 
 ```
 "Use the release manager agent to create an auto release"
-"Use release-manager to bump patch version"
-"I want to create a new release"
 "Check release status using the release manager"
 ```
 
-The agent will:
-1. Analyze commits since last release
-2. Determine appropriate version bump
-3. Generate formatted changelog
-4. Show preview and ask for confirmation
-5. Update package.json, create tag, and push
-6. Monitor GitHub Actions build status
+The agent analyzes commits, determines version bump, generates changelog, tags, pushes, and monitors the build. See `.claude/README.md` for details.
 
-See `.claude/README.md` for detailed agent documentation.
+**Manual release:** bump `package.json` version, commit, `git tag vX.Y.Z`, push with `--tags`. GitHub Actions builds all platforms and creates a draft release.
 
-### Manual Release Process
+**Build config:** `electron-builder.json5` (not package.json). Always do clean builds when switching dev → production.
 
-If you need to release manually:
+## Safety
 
-1. **Commit Changes:**
-   ```bash
-   git add .
-   git commit -m "fix: description of changes"
-   ```
-
-2. **Update Package Version:**
-   - Edit `package.json` to increment version
-   - Example: change `"version": "2.0.0"` to `"version": "2.0.1"`
-
-3. **Create Git Tag:**
-   ```bash
-   git commit -m "chore: bump version to 2.0.1"
-   git tag v2.0.1
-   ```
-
-4. **Push to GitHub:**
-   ```bash
-   git push origin main --tags
-   ```
-   - GitHub Actions automatically builds for Windows, macOS, and Linux
-   - Creates a draft release with all installers
-   - Check progress at: `https://github.com/ArtluxDM/SnipForge/actions`
-   - Review and publish the draft release when builds complete
-
-**Build Configuration:**
-- Uses `electron-builder.json5` for build settings (not package.json)
-- Outputs to `release/{version}/` directory
-- Automatically handles native dependencies like `better-sqlite3`
-
-## Safety Considerations
-
-- Clipboard-only operations (no automatic command execution)
+- Clipboard-only — never executes commands automatically
 - Variable substitution prompts prevent accidental execution
-- Local SQLite storage (no cloud dependencies)
-
-## Automated Builds
-
-GitHub Actions automatically builds for all platforms when you push a tag:
-
-**Workflow:** `.github/workflows/release.yml`
-- Triggered by: pushing tags (e.g., `v2.4.0`)
-- Builds: macOS (.dmg), Windows (.exe), Linux (.AppImage, .deb, .rpm)
-- Creates: Draft GitHub release with all installers
-- Free: Unlimited builds for public repositories
-
-**Manual Release Process** (if needed):
-1. Clean build cache: `rm -rf node_modules/.vite dist dist-electron release`
-2. Build: `pnpm build`
-3. DMG location: `release/{version}/SnipForge-Mac-{version}-Installer.dmg`
-
-**Important:** Always do clean builds when switching from dev to production to avoid caching issues.
+- GitHub tokens encrypted via Electron `safeStorage` before SQLite storage
+- DOMPurify sanitizes all rendered HTML
