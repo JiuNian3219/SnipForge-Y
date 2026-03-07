@@ -1,17 +1,7 @@
 import Fuse, { type IFuseOptions } from 'fuse.js'
+import type { CommandWithTags } from '../../shared/types'
 
-export interface Command {
-  id: number
-  title: string
-  body: string
-  description: string
-  tags: string
-  tagsArray: string[] // Pre-parsed tags for performance
-  tagsNormalized: string[] // Pre-normalized (lowercase) for filtering
-  language: string
-  created_at: string
-  updated_at: string
-}
+type Command = CommandWithTags
 
 const fuseOptions: IFuseOptions<Command> = {
   keys: [

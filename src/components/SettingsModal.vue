@@ -9,7 +9,7 @@
             :class="{ active: activeTab === 'settings' }"
             @click="activeTab = 'settings'"
           >
-            Settings
+            Libraries
           </button>
           <button
             class="tab-button"
@@ -24,12 +24,162 @@
 
       <div class="modal-body">
 
-        <!-- Tab 1: Settings -->
-        <div v-if="activeTab === 'settings'" class="coming-soon-container">
-          <div class="coming-soon-content">
-            <div class="coming-soon-icon">⚙️</div>
-            <h2 class="coming-soon-title">Settings</h2>
-            <p class="coming-soon-text">Coming Soon</p>
+        <!-- Tab 1: Remote Libraries -->
+        <div v-if="activeTab === 'settings'" class="libraries-tab">
+          <!-- GitHub Auth Section -->
+          <div class="settings-section">
+            <h3>GitHub Account</h3>
+
+            <!-- Not authenticated -->
+            <div v-if="!authStatus.authenticated" class="auth-section">
+              <p class="section-description">
+                Sign in with GitHub to subscribe to remote command libraries.
+              </p>
+
+              <!-- Device Flow: not started -->
+              <div v-if="!deviceFlow.active">
+                <button @click="startLogin" class="github-login-button" :disabled="deviceFlow.loading">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  Sign in with GitHub
+                </button>
+              </div>
+
+              <!-- Device Flow: waiting for user to authorize -->
+              <div v-else-if="deviceFlow.active && !deviceFlow.completed" class="device-flow-prompt">
+                <p class="device-flow-instruction">
+                  Open the link below and enter this code:
+                </p>
+                <div class="device-code-display">
+                  <code class="device-code">{{ deviceFlow.userCode }}</code>
+                  <button @click="copyDeviceCode" class="copy-code-button" title="Copy code">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <button @click="openVerificationUrl" class="verification-link-button">
+                  Open github.com/login/device
+                </button>
+                <p class="device-flow-status">
+                  <span class="spinner"></span>
+                  Waiting for authorization...
+                </p>
+                <button @click="cancelLogin" class="cancel-auth-button">Cancel</button>
+              </div>
+            </div>
+
+            <!-- Authenticated -->
+            <div v-else class="auth-user-info">
+              <div class="user-profile">
+                <img
+                  v-if="authStatus.user?.avatar_url"
+                  :src="authStatus.user.avatar_url"
+                  class="user-avatar"
+                  alt="Avatar"
+                  width="32"
+                  height="32"
+                />
+                <div class="user-details">
+                  <span class="user-name">{{ authStatus.user?.name || authStatus.user?.login }}</span>
+                  <span class="user-login">@{{ authStatus.user?.login }}</span>
+                </div>
+                <button @click="handleLogout" class="logout-button">Sign out</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Library Subscriptions Section -->
+          <div class="settings-section">
+            <div class="section-header-row">
+              <h3>Libraries</h3>
+              <button
+                v-if="authStatus.authenticated"
+                @click="handleSyncAll"
+                class="sync-all-button"
+                :disabled="syncing"
+              >
+                <svg :class="['sync-icon', { spinning: syncing }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                {{ syncing ? 'Syncing...' : 'Sync All' }}
+              </button>
+            </div>
+
+            <!-- Subscribe to new library -->
+            <div v-if="authStatus.authenticated" class="subscribe-form">
+              <input
+                v-model="newRepoUrl"
+                type="text"
+                class="repo-input"
+                placeholder="owner/repo or GitHub URL"
+                @keydown.enter="handleSubscribe"
+                :disabled="subscribing"
+              />
+              <button
+                @click="handleSubscribe"
+                class="subscribe-button"
+                :disabled="subscribing || !newRepoUrl.trim()"
+              >
+                {{ subscribing ? 'Adding...' : 'Subscribe' }}
+              </button>
+            </div>
+
+            <!-- Error message -->
+            <p v-if="libraryError" class="library-error">{{ libraryError }}</p>
+
+            <!-- Library list -->
+            <div v-if="libraries.length > 0" class="library-list">
+              <div v-for="lib in libraries" :key="lib.id" class="library-item">
+                <div class="library-info">
+                  <span class="library-name">{{ lib.name }}</span>
+                  <span class="library-repo">{{ lib.github_repo }}</span>
+                  <span v-if="lib.last_synced_at" class="library-synced">
+                    Last synced: {{ formatSyncTime(lib.last_synced_at) }}
+                  </span>
+                </div>
+                <div class="library-actions">
+                  <button
+                    @click="handleSyncLibrary(lib.id)"
+                    class="library-action-btn"
+                    :disabled="syncing"
+                    title="Sync"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <polyline points="1 20 1 14 7 14"></polyline>
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click="handleUnsubscribe(lib.id, lib.name)"
+                    class="library-action-btn danger"
+                    title="Unsubscribe"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="authStatus.authenticated" class="empty-libraries">
+              <p>No library subscriptions yet.</p>
+              <p class="section-description">Enter a GitHub repo above to subscribe.</p>
+            </div>
+            <div v-else class="empty-libraries">
+              <p>Sign in with GitHub to subscribe to remote libraries.</p>
+            </div>
+
+            <!-- Sync result notification -->
+            <div v-if="syncMessage" class="sync-message" :class="syncMessageType">
+              {{ syncMessage }}
+            </div>
           </div>
         </div>
 
@@ -109,12 +259,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { Download, Upload } from 'lucide-vue-next'
 import { getAllTags } from '../utils/tags'
 import { getInlineSuggestion } from '../utils/autocomplete'
 import CommandList from './CommandList.vue'
 import TagSelector from './TagSelector.vue'
+import type { Library, AuthStatus } from '../../shared/types'
 
 // Props
 interface Props {
@@ -142,11 +293,306 @@ const emit = defineEmits<{
   import: []
   'bulk-delete': [ids: number[]]
   'bulk-export': [ids: number[]]
+  'libraries-changed': []
 }>()
 
 // Tab state
 type Tab = 'settings' | 'management'
 const activeTab = ref<Tab>('settings')
+
+// ── GitHub Auth State ──────────────────────────────────────────
+const authStatus = ref<AuthStatus>({ authenticated: false, user: null })
+const deviceFlow = ref({
+  active: false,
+  loading: false,
+  completed: false,
+  userCode: '',
+  verificationUri: '',
+  deviceCode: '',
+  interval: 5,
+})
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+// ── Library State ──────────────────────────────────────────────
+const libraries = ref<Library[]>([])
+const newRepoUrl = ref('')
+const subscribing = ref(false)
+const syncing = ref(false)
+const libraryError = ref('')
+const syncMessage = ref('')
+const syncMessageType = ref<'success' | 'error'>('success')
+
+// Load auth status and libraries when modal opens
+watch(() => props.show, async (visible) => {
+  if (visible) {
+    await loadAuthStatus()
+    await loadLibraries()
+  } else {
+    // Clear device flow on close
+    cancelLogin()
+  }
+})
+
+async function loadAuthStatus() {
+  try {
+    authStatus.value = await (window.electronAPI as any).auth.getStatus()
+  } catch {
+    authStatus.value = { authenticated: false, user: null }
+  }
+}
+
+async function loadLibraries() {
+  try {
+    libraries.value = await (window.electronAPI as any).library.getAll()
+  } catch {
+    libraries.value = []
+  }
+}
+
+// ── Auth Functions ─────────────────────────────────────────────
+async function startLogin() {
+  deviceFlow.value.loading = true
+  libraryError.value = ''
+  try {
+    const result = await (window.electronAPI as any).auth.login()
+    if (!result.success) {
+      libraryError.value = result.error || 'Failed to start login'
+      return
+    }
+    deviceFlow.value = {
+      active: true,
+      loading: false,
+      completed: false,
+      userCode: result.user_code,
+      verificationUri: result.verification_uri,
+      deviceCode: result.device_code,
+      interval: result.interval || 5,
+    }
+    startPolling()
+  } catch (e) {
+    libraryError.value = (e as Error).message
+    deviceFlow.value.loading = false
+  }
+}
+
+function startPolling() {
+  if (pollTimer) clearTimeout(pollTimer)
+  const interval = Math.max(deviceFlow.value.interval, 5) * 1000
+
+  async function poll() {
+    try {
+      const result = await (window.electronAPI as any).auth.pollLogin(deviceFlow.value.deviceCode)
+      if (result.success) {
+        stopPolling()
+        deviceFlow.value.completed = true
+        deviceFlow.value.active = false
+        authStatus.value = { authenticated: true, user: result.user || null }
+        await loadLibraries()
+        return
+      } else if (result.error === 'expired_token') {
+        stopPolling()
+        cancelLogin()
+        libraryError.value = 'Login code expired. Please try again.'
+        return
+      } else if (result.error === 'slow_down') {
+        deviceFlow.value.interval += 5
+      }
+      // Schedule next poll with current interval (handles slow_down increases)
+      const nextInterval = Math.max(deviceFlow.value.interval, 5) * 1000
+      pollTimer = setTimeout(poll, nextInterval)
+    } catch (e) {
+      console.error('[Auth] Poll error:', e)
+      // Retry after current interval on error
+      const nextInterval = Math.max(deviceFlow.value.interval, 5) * 1000
+      pollTimer = setTimeout(poll, nextInterval)
+    }
+  }
+
+  // First poll after initial delay
+  pollTimer = setTimeout(poll, interval)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
+}
+
+function cancelLogin() {
+  stopPolling()
+  deviceFlow.value = {
+    active: false,
+    loading: false,
+    completed: false,
+    userCode: '',
+    verificationUri: '',
+    deviceCode: '',
+    interval: 5,
+  }
+}
+
+async function copyDeviceCode() {
+  try {
+    await (window.electronAPI as any).clipboard.writeText(deviceFlow.value.userCode)
+  } catch { /* ignore */ }
+}
+
+async function openVerificationUrl() {
+  try {
+    await (window.electronAPI as any).shell.openExternal(deviceFlow.value.verificationUri || 'https://github.com/login/device')
+  } catch { /* ignore */ }
+}
+
+async function handleLogout() {
+  try {
+    await (window.electronAPI as any).auth.logout()
+    authStatus.value = { authenticated: false, user: null }
+  } catch { /* ignore */ }
+}
+
+// ── Library Functions ──────────────────────────────────────────
+async function handleSubscribe() {
+  if (!newRepoUrl.value.trim() || subscribing.value) return
+  subscribing.value = true
+  libraryError.value = ''
+  syncMessage.value = ''
+
+  try {
+    const result = await (window.electronAPI as any).library.subscribe(newRepoUrl.value.trim())
+    if (result.success) {
+      newRepoUrl.value = ''
+      await loadLibraries()
+      const sr = result.syncResult
+      syncMessage.value = `Subscribed! Added ${sr?.added || 0} commands.`
+      syncMessageType.value = 'success'
+      emit('libraries-changed')
+      clearSyncMessage()
+    } else {
+      libraryError.value = result.error || 'Failed to subscribe'
+    }
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  } finally {
+    subscribing.value = false
+  }
+}
+
+async function handleUnsubscribe(libraryId: number, name: string) {
+  if (!confirm(`Unsubscribe from "${name}"? This will remove all commands from this library.`)) return
+  try {
+    const result = await (window.electronAPI as any).library.unsubscribe(libraryId)
+    if (result.success) {
+      await loadLibraries()
+      syncMessage.value = `Unsubscribed from ${name}`
+      syncMessageType.value = 'success'
+      emit('libraries-changed')
+      clearSyncMessage()
+    } else {
+      libraryError.value = result.error || 'Failed to unsubscribe'
+    }
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  }
+}
+
+async function handleSyncLibrary(libraryId: number) {
+  syncing.value = true
+  syncMessage.value = ''
+  libraryError.value = ''
+  try {
+    const result = await (window.electronAPI as any).library.sync(libraryId)
+    if (result.success) {
+      await loadLibraries()
+      const total = (result.added || 0) + (result.updated || 0) + (result.removed || 0)
+      if (total === 0) {
+        syncMessage.value = 'Already up to date.'
+      } else {
+        const parts: string[] = []
+        if (result.added) parts.push(`${result.added} added`)
+        if (result.updated) parts.push(`${result.updated} updated`)
+        if (result.removed) parts.push(`${result.removed} removed`)
+        syncMessage.value = `Synced: ${parts.join(', ')}`
+      }
+      syncMessageType.value = 'success'
+      emit('libraries-changed')
+      clearSyncMessage()
+    } else {
+      libraryError.value = result.error || 'Sync failed'
+    }
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  } finally {
+    syncing.value = false
+  }
+}
+
+async function handleSyncAll() {
+  syncing.value = true
+  syncMessage.value = ''
+  libraryError.value = ''
+  try {
+    const result = await (window.electronAPI as any).library.syncAll()
+    if (result.success && result.results) {
+      await loadLibraries()
+      let totalAdded = 0, totalUpdated = 0, totalRemoved = 0
+      const errors: string[] = []
+      for (const r of result.results) {
+        totalAdded += r.result.added
+        totalUpdated += r.result.updated
+        totalRemoved += r.result.removed
+        errors.push(...r.result.errors)
+      }
+      const total = totalAdded + totalUpdated + totalRemoved
+      if (total === 0 && errors.length === 0) {
+        syncMessage.value = 'All libraries up to date.'
+      } else {
+        const parts: string[] = []
+        if (totalAdded) parts.push(`${totalAdded} added`)
+        if (totalUpdated) parts.push(`${totalUpdated} updated`)
+        if (totalRemoved) parts.push(`${totalRemoved} removed`)
+        syncMessage.value = parts.length ? `Synced: ${parts.join(', ')}` : ''
+        if (errors.length) {
+          libraryError.value = errors.join('; ')
+        }
+      }
+      syncMessageType.value = errors.length ? 'error' : 'success'
+      emit('libraries-changed')
+      clearSyncMessage()
+    } else {
+      libraryError.value = result.error || 'Sync failed'
+    }
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  } finally {
+    syncing.value = false
+  }
+}
+
+function formatSyncTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    const now = new Date()
+    const diff = now.getTime() - d.getTime()
+    const minutes = Math.floor(diff / 60000)
+    if (minutes < 1) return 'just now'
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  } catch {
+    return iso
+  }
+}
+
+let syncMessageTimer: ReturnType<typeof setTimeout> | null = null
+function clearSyncMessage() {
+  if (syncMessageTimer) clearTimeout(syncMessageTimer)
+  syncMessageTimer = setTimeout(() => {
+    syncMessage.value = ''
+  }, 5000)
+}
 
 // Form data
 const exportTags = ref('')
@@ -970,36 +1416,404 @@ const handleBulkExport = () => {
   flex-direction: column;
 }
 
-/* Coming Soon Styles */
-.coming-soon-container {
+/* Libraries Tab */
+.libraries-tab {
   flex: 1;
+  overflow-y: auto;
+}
+
+/* GitHub Auth */
+.auth-section {
+  margin-top: 12px;
+}
+
+.github-login-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.github-login-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.github-login-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Device Flow */
+.device-flow-prompt {
+  margin-top: 12px;
+}
+
+.device-flow-instruction {
+  margin: 0 0 12px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.device-code-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.device-code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--accent-light);
+  background: var(--bg-input);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: monospace;
+}
+
+.copy-code-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
+  transition: all 0.2s;
 }
 
-.coming-soon-content {
-  text-align: center;
-  padding: 60px 40px;
-}
-
-.coming-soon-icon {
-  font-size: 64px;
-  margin-bottom: 24px;
-}
-
-.coming-soon-title {
-  margin: 0 0 12px 0;
+.copy-code-button:hover {
+  background: var(--bg-hover);
   color: var(--text-primary);
-  font-size: 24px;
-  font-weight: 600;
 }
 
-.coming-soon-text {
-  margin: 0;
+.verification-link-button {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-bottom: 12px;
+}
+
+.verification-link-button:hover {
+  background: var(--accent-hover);
+}
+
+.device-flow-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--text-tertiary);
-  font-size: 16px;
+  font-size: 13px;
+  margin: 0 0 8px 0;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cancel-auth-button {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-auth-button:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* Authenticated user */
+.auth-user-info {
+  margin-top: 12px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.user-name {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.user-login {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.logout-button {
+  padding: 6px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--text-primary);
+}
+
+/* Library Subscriptions */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.section-header-row h3 {
+  margin: 0;
+}
+
+.sync-all-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sync-all-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sync-all-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sync-icon {
+  flex-shrink: 0;
+}
+
+.sync-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.subscribe-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.repo-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.repo-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.repo-input::placeholder {
+  color: var(--text-muted);
+}
+
+.subscribe-button {
+  padding: 8px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.subscribe-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.subscribe-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.library-error {
+  color: #ef5350;
+  font-size: 13px;
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: rgba(239, 83, 80, 0.1);
+  border-radius: 6px;
+}
+
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.library-item:hover {
+  border-color: var(--border-hover);
+}
+
+.library-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.library-name {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.library-repo {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.library-synced {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.library-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.library-action-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.library-action-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.library-action-btn.danger:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--text-primary);
+}
+
+.library-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-libraries {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.empty-libraries p {
+  margin: 0 0 4px 0;
+}
+
+.sync-message {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.sync-message.success {
+  color: #66bb6a;
+  background: rgba(102, 187, 106, 0.1);
+}
+
+.sync-message.error {
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.1);
 }
 
 /* Import Button */

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron"
-import type { Command } from "../../shared/types"
+import type { Command, Library, SyncResult, AuthStatus, GitHubUser } from "../../shared/types"
 //expose db methods to renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // db methods
@@ -52,6 +52,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     close: (): Promise<void> => ipcRenderer.invoke('window:close'),
     isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:isMaximized'),
     getPlatform: (): Promise<string> => ipcRenderer.invoke('window:getPlatform')
+  },
+  // GitHub auth methods
+  auth: {
+    login: (): Promise<{ success: boolean; user_code?: string; verification_uri?: string; device_code?: string; interval?: number; expires_in?: number; error?: string }> =>
+      ipcRenderer.invoke('auth:login'),
+    pollLogin: (deviceCode: string): Promise<{ success: boolean; user?: GitHubUser; error?: string }> =>
+      ipcRenderer.invoke('auth:pollLogin', deviceCode),
+    logout: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('auth:logout'),
+    getStatus: (): Promise<AuthStatus> =>
+      ipcRenderer.invoke('auth:getStatus'),
+  },
+  // Library methods
+  library: {
+    subscribe: (repoUrl: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }> =>
+      ipcRenderer.invoke('library:subscribe', repoUrl),
+    unsubscribe: (libraryId: number): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('library:unsubscribe', libraryId),
+    sync: (libraryId: number): Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }> =>
+      ipcRenderer.invoke('library:sync', libraryId),
+    syncAll: (): Promise<{ success: boolean; results?: Array<{ library: Library; result: SyncResult }>; error?: string }> =>
+      ipcRenderer.invoke('library:syncAll'),
+    getAll: (): Promise<Library[]> =>
+      ipcRenderer.invoke('library:getAll'),
+    browse: (repoUrl: string): Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }> =>
+      ipcRenderer.invoke('library:browse', repoUrl),
   }
 })
 // tell the compiler what's availible on the window object
@@ -89,9 +115,21 @@ declare global {
         close: () => Promise<void>
         isMaximized: () => Promise<boolean>
         getPlatform: () => Promise<string>
+      },
+      auth: {
+        login: () => Promise<{ success: boolean; user_code?: string; verification_uri?: string; device_code?: string; interval?: number; expires_in?: number; error?: string }>
+        pollLogin: (deviceCode: string) => Promise<{ success: boolean; user?: GitHubUser; error?: string }>
+        logout: () => Promise<{ success: boolean }>
+        getStatus: () => Promise<AuthStatus>
+      },
+      library: {
+        subscribe: (repoUrl: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
+        unsubscribe: (libraryId: number) => Promise<{ success: boolean; error?: string }>
+        sync: (libraryId: number) => Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }>
+        syncAll: () => Promise<{ success: boolean; results?: Array<{ library: Library; result: SyncResult }>; error?: string }>
+        getAll: () => Promise<Library[]>
+        browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
       }
     }
   }
 }
-
-

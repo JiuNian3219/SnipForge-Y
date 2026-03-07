@@ -5,6 +5,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { promises as fs } from 'node:fs'
 import * as db from './database'
+import * as github from './github'
 
 // Track app quitting state
 let isAppQuiting = false
@@ -495,6 +496,120 @@ ipcMain.handle('shell:openExternal', async (_, url: string) => {
   } catch (error) {
     console.error('Error opening external URL:', error)
     throw error
+  }
+})
+
+// ── GitHub Auth IPC handlers ──────────────────────────────────────
+ipcMain.handle('auth:login', async () => {
+  try {
+    const flow = await github.startDeviceFlow()
+    return {
+      success: true,
+      user_code: flow.user_code,
+      verification_uri: flow.verification_uri,
+      device_code: flow.device_code,
+      interval: flow.interval,
+      expires_in: flow.expires_in,
+    }
+  } catch (error) {
+    console.error('Auth login error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('auth:pollLogin', async (_, deviceCode: string) => {
+  try {
+    const result = await github.pollDeviceFlow(deviceCode)
+    return result
+  } catch (error) {
+    console.error('Auth poll error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('auth:logout', async () => {
+  github.logout()
+  return { success: true }
+})
+
+ipcMain.handle('auth:getStatus', async () => {
+  try {
+    return await github.getAuthStatus()
+  } catch (error) {
+    console.error('Auth status error:', error)
+    return { authenticated: false, user: null }
+  }
+})
+
+// ── Library IPC handlers ─────────────────────────────────────────
+ipcMain.handle('library:subscribe', async (_, repoUrl: string) => {
+  if (typeof repoUrl !== 'string' || !repoUrl.trim()) {
+    return { success: false, error: 'Invalid repository URL' }
+  }
+  try {
+    const { library, syncResult } = await github.subscribeToLibrary(repoUrl)
+    return { success: true, library, syncResult }
+  } catch (error) {
+    console.error('Library subscribe error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:unsubscribe', async (_, libraryId: number) => {
+  if (typeof libraryId !== 'number') {
+    return { success: false, error: 'Invalid library ID' }
+  }
+  try {
+    github.unsubscribeFromLibrary(libraryId)
+    return { success: true }
+  } catch (error) {
+    console.error('Library unsubscribe error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:sync', async (_, libraryId: number) => {
+  if (typeof libraryId !== 'number') {
+    return { success: false, error: 'Invalid library ID' }
+  }
+  try {
+    const result = await github.syncLibrary(libraryId, true)
+    return { success: true, ...result }
+  } catch (error) {
+    console.error('Library sync error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:syncAll', async () => {
+  try {
+    const { results } = await github.syncAllLibraries()
+    return { success: true, results }
+  } catch (error) {
+    console.error('Library syncAll error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:getAll', async () => {
+  try {
+    return github.getAllLibraries()
+  } catch (error) {
+    console.error('Library getAll error:', error)
+    return []
+  }
+})
+
+ipcMain.handle('library:browse', async (_, repoUrl: string) => {
+  if (typeof repoUrl !== 'string' || !repoUrl.trim()) {
+    return { success: false, error: 'Invalid repository URL' }
+  }
+  try {
+    const data = await github.browseLibrary(repoUrl)
+    return { success: true, ...data }
+  } catch (error) {
+    console.error('Library browse error:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 

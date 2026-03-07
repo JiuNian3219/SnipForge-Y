@@ -1079,6 +1079,7 @@ const openDescriptionModal = (title: string, description: string) => {
       @bulk-delete="handleBulkDelete"
       @bulk-export="handleBulkExport"
       @cancel="showSettingsModal = false"
+      @libraries-changed="loadCommands"
     />
 
     <!-- Help Modal -->

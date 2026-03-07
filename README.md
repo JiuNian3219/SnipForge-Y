@@ -1,32 +1,47 @@
 # SnipForge
 
-A desktop application for saving, searching, and managing commands and text snippets.
+A desktop app for saving, searching, and managing command snippets. Built for engineers who want a searchable, hotkey-triggered command palette with variable substitution — think "runbooks that live on your desktop."
+
+Teams use SnipForge to share command libraries via GitHub repos. New members see the app, subscribe to the team library, and have every command at their fingertips.
 
 ## Features
 
-- **Multiple Editor Types**: Plain Text, Rich Text (WYSIWYG), Markdown, and Code editors
-- **Syntax Highlighting**: Support for 15+ programming languages (JavaScript, TypeScript, Python, Go, Rust, Java, HTML, CSS, YAML, JSON, SQL, Bash, PHP, XML, and more)
-- **Rich Text Editing**: WYSIWYG editor with formatting, lists, task lists, and links.
-- **Markdown Support**: Markdown editor with toolbar and syntax highlighting
-- **Real-time Search**: Search by title, body, or tags across all snippets
-- **Global Hotkey**: Quick access with `Cmd+Shift+Space` (macOS) or `Ctrl+Shift+Space` (Windows/Linux)
-- **Clipboard Integration**: One-click copy with variable substitution
-- **Tag System**: Organize snippets with tags and autocomplete
-- **Variable Substitution**: Dynamic values using `{{variable name}}` syntax
-- **Keyboard Navigation**: Full keyboard shortcuts for power users
-- **Export/Import**: JSON format with tag filtering
-- **Built-in Help**: Comprehensive help system with keyboard shortcuts
+### Editors
+- **Plain Text** — simple text input
+- **Rich Text** — WYSIWYG with formatting, lists, task lists, and links (TipTap)
+- **Markdown** — syntax-highlighted editor with toolbar (CodeMirror 6)
+- **Code** — syntax highlighting for 15+ languages (JavaScript, TypeScript, Python, Go, Rust, Java, HTML, CSS, YAML, JSON, SQL, Bash, PHP, XML, and more)
+
+### Core
+- **Global Hotkey** — `Cmd+Shift+Space` (macOS) / `Ctrl+Shift+Space` (Windows/Linux) opens SnipForge from anywhere
+- **Fuzzy Search** — real-time weighted search across title, tags, description, and body
+- **Variables** — `{{variable name}}` template syntax with user prompts on copy
+- **Tag System** — organize with tags, filter with tag selectors, autocomplete with Tab
+- **Clipboard** — one-click copy with multi-format support (plain text + HTML for rich text and code)
+- **Keyboard-Driven** — full navigation without touching the mouse
+
+### Team Sharing
+- **Remote Libraries** — subscribe to GitHub repos containing shared command snippets
+- **One-Way Sync** — curators publish, members pull. No merge conflicts
+- **Multi-Repo** — subscribe to multiple libraries simultaneously (e.g., `k8s-team`, `support-tools`)
+- **Local Commands Stay Private** — remote commands are tagged with their source, never mixed
+
+### Data Management
+- **Export/Import** — JSON format with tag filtering and duplicate detection
+- **SQLite Storage** — local database, no cloud dependency
+- **System Tray** — runs in the background, always accessible
 
 ## Installation
 
 ### From Release (Recommended)
-1. Download the latest `.dmg` (macOS) from [Releases](../../releases)
-2. Open the DMG and drag SnipForge to Applications
-3. Launch SnipForge
+Download the latest installer from [Releases](../../releases):
+- **macOS**: `.dmg`
+- **Windows**: `.exe`
+- **Linux**: `.AppImage`, `.deb`, `.rpm`
 
-**macOS Security Note**: Since this app isn't code signed, macOS will show a "damaged" warning. To run it:
-- **Method 1**: Right-click the app → "Open" → "Open" (bypasses Gatekeeper)
-- **Method 2**: Run this command in Terminal:
+**macOS Security Note**: Since this app isn't code signed, macOS will show a warning. To run it:
+- **Method 1**: Right-click the app > "Open" > "Open" (bypasses Gatekeeper)
+- **Method 2**: Run in Terminal:
   ```bash
   xattr -cr /Applications/SnipForge.app
   ```
@@ -34,85 +49,56 @@ A desktop application for saving, searching, and managing commands and text snip
 ### Build from Source
 
 ```bash
-# Clone the repository
 git clone https://github.com/ArtluxDM/SnipForge.git
 cd SnipForge
-
-# Install dependencies
 pnpm install
-
-# Development
-pnpm dev
-
-# Build for production
-pnpm build
+pnpm dev       # development
+pnpm build     # production build
 ```
 
 ## Usage
 
-### Global Hotkey
-Press `Cmd+Shift+Space` to open SnipForge from anywhere.
-
 ### Keyboard Shortcuts
-- **Search**: Type to filter commands
-- **Navigate**: Arrow keys to select commands
-- **Copy**: `C` or `Enter` to copy command to clipboard
-- **Copy Template**: `Shift+C` to copy with variables intact
-- **New**: `N` to create new command
-- **Edit**: `E` to edit selected command
-- **Delete**: `Backspace` to delete selected command
-- **Clear**: `Escape` to clear search
-- **Help**: `H` to open help modal
-- **Settings**: `S` to open settings
+| Key | Action |
+|-----|--------|
+| Type | Search commands |
+| `Arrow Keys` | Navigate list |
+| `C` or `Enter` | Copy command |
+| `Shift+C` | Copy with variables intact |
+| `N` | New command |
+| `E` | Edit selected |
+| `Backspace` | Delete selected |
+| `Escape` | Clear search |
+| `H` | Help |
+| `S` | Settings |
 
 ### Variables
-Use `{{variable name}}` syntax in commands for dynamic values:
+Use `{{variable name}}` in commands for dynamic values:
 ```bash
 ssh {{username}}@{{server}}
+kubectl get pods -n {{namespace}}
 docker exec -it {{container name}} bash
 ```
+When copied, you'll be prompted to fill in each variable.
 
-When copied, you'll be prompted to enter values for each variable.
+### Remote Libraries
+Subscribe to shared command libraries hosted on GitHub. See [docs/remote-libraries.md](docs/remote-libraries.md) for setup details.
 
-### Tags
-- Add tags when creating/editing commands
-- Use autocomplete with `Tab` to complete tag suggestions
-- Export specific tags using the export feature
+1. Open Settings > **Libraries** tab
+2. Sign in with GitHub
+3. Enter a repo URL (e.g., `org/repo-name`)
+4. Click Subscribe — commands appear in your main list
 
-### Export/Import
-- Export all commands or filter by specific tags
-- Commands are saved in JSON format
-- Import previously exported JSON files
+## Tech Stack
+- **Desktop**: Electron + Vue 3 + Vite + TypeScript
+- **Database**: SQLite via better-sqlite3
+- **Editors**: CodeMirror 6 (code/markdown), TipTap (rich text)
+- **Search**: Fuse.js (fuzzy search with weighted scoring)
+- **UI**: Lucide icons, virtual scrolling (Virtua), DOMPurify, highlight.js
 
-## Roadmap
+## Documentation
+- [Codebase Map](docs/codebase-map.md) — file reference, architecture, IPC channels
+- [Remote Libraries](docs/remote-libraries.md) — GitHub OAuth setup, repo structure, sync algorithm
 
-### ✅ Completed Features
-- [x] Multiple editor types (Plain Text, Rich Text, Markdown, Code)
-- [x] Syntax highlighting for 15+ programming languages
-- [x] WYSIWYG rich text editor with custom checkboxes
-- [x] Markdown editor with toolbar
-- [x] Global hotkey access
-- [x] Command CRUD operations (Create, Read, Update, Delete)
-- [x] Real-time search filtering
-- [x] Fuzzy search with weighted scoring (Fuse.js)
-- [x] Tag filtering with AND logic
-- [x] Variable substitution system
-- [x] Tag system with autocomplete
-- [x] Keyboard navigation and shortcuts
-- [x] Clipboard integration (multi-format: HTML + plain text)
-- [x] Export/Import with tag filtering
-- [x] Duplicate detection on import
-- [x] Built-in help system with markdown rendering
-- [x] Virtual scrolling for performance
-- [x] Description field with markdown support
-- [x] Content sanitization (DOMPurify for XSS protection)
-- [x] Syntax highlighting in copied code (highlight.js)
-- [x] SQLite local storage
-- [x] Custom title bar and window management
-- [x] System tray integration
-- [x] Windows and Linux builds via GitHub Actions
-
-### 🔄 Upcoming Improvements
-- [ ] Command history and favorites
-- [ ] Cloud sync (optional)
-- [ ] Themes and customization
+## License
+[MIT](LICENSE)
