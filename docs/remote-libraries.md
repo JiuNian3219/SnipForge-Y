@@ -212,6 +212,7 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 | `library:init` | Initialize repo as SnipForge library |
 | `library:publish` | Push a command to the repo as a JSON file |
 | `library:unpublish` | Remove a command from the repo |
+| `library:bulkPublish` | Push multiple commands sequentially, with progress events |
 
 #### Key Files
 
@@ -223,6 +224,7 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 | `electron/preload/index.ts` | Exposes auth + library channels to renderer |
 | `shared/types.ts` | Shared types: Library, RemoteCommand, SyncResult, etc. |
 | `src/components/SettingsModal.vue` | Libraries tab UI |
+| `src/components/BulkPublishModal.vue` | Bulk publish: command selection, progress, results |
 
 ### Development Workflow
 
@@ -285,7 +287,7 @@ Auth + subscribe + pull + sync + unsubscribe. The core flow works end to end.
 - [x] Initialize a GitHub repo as a SnipForge library from the app
 - [x] Push individual commands to a library repo
 - [x] Remove commands from a library repo
-- Bulk publish selected commands
+- [x] Bulk publish selected commands
 
 **Init Library (issue [#2](https://github.com/ArtluxDM/SnipForge/issues/2)):**
 
@@ -351,6 +353,37 @@ Key changes:
 2. Local command disappears from the list
 3. Subscribe from another account → sync → command is gone
 4. Try to unpublish a local command → button not shown (correct)
+
+**Bulk Publish (issue [#5](https://github.com/ArtluxDM/SnipForge/issues/5)):**
+
+Flow: click "Bulk Publish" button in toolbar → modal opens with checkboxable list of local commands + library picker → select commands + target library → click Publish → sequential publish with progress feedback → summary of results.
+
+Key details:
+- Modal shows only local commands (remote commands can't be re-published)
+- Library picker dropdown at top (pre-selected if only one initialized library)
+- Select all / deselect all toggle
+- Progress bar during publish with per-command status (success/fail)
+- Sequential API calls (GitHub Contents API, one commit per file)
+- Partial failure handling: continues on error, reports which succeeded/failed at the end
+- Keyboard shortcut: `Shift+P` to open bulk publish modal
+
+Key changes:
+- `github.ts`: new `bulkPublishCommands()` — iterates commands, calls `publishCommand` for each, sends progress via callback
+- `index.ts`: `library:bulkPublish` IPC handler — fetches commands from DB, calls bulkPublishCommands, sends `library:bulkPublishProgress` events to renderer
+- `preload/index.ts`: expose `library:bulkPublish` + `onBulkPublishProgress` channels + Window type
+- `src/components/BulkPublishModal.vue` — NEW: modal with checkboxable command list, library picker, progress bar, result summary
+- `App.vue`: toolbar `PackagePlus` button (visible when initialized libraries exist) + `Shift+P` shortcut
+- `src/vite-env.d.ts`: added `bulkPublish` + `onBulkPublishProgress` type declarations
+- `shared/types.ts`: new `BulkPublishResult` interface
+
+**Verification:**
+1. Click PackagePlus button in toolbar → bulk publish modal opens
+2. Select commands via checkboxes → pick library → click Publish → progress bar advances
+3. Each command gets a "Done" or "Failed" status badge
+4. Summary shows X published, Y failed
+5. Press Shift+P → same modal opens
+6. Partial failure: if one command errors mid-batch, others continue
+7. Button hidden when no initialized libraries exist
 
 #### Phase 4: Unified Library & Export Model
 

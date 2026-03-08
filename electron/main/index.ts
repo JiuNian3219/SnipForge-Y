@@ -659,6 +659,45 @@ ipcMain.handle('library:publish', async (_, libraryId: number, commandId: number
   }
 })
 
+ipcMain.handle('library:bulkPublish', async (_, libraryId: number, commandIds: number[]) => {
+  if (typeof libraryId !== 'number' || !Array.isArray(commandIds) || commandIds.length === 0) {
+    return { success: false, error: 'Invalid parameters', results: [] }
+  }
+  try {
+    // Fetch all commands from DB
+    const allCommands = db.getAllCommands()
+    const commandsToPublish = commandIds
+      .map(id => allCommands.find(c => c.id === id))
+      .filter((c): c is NonNullable<typeof c> => !!c)
+      .map(c => ({
+        id: c.id,
+        title: c.title,
+        body: c.body,
+        description: c.description || '',
+        tags: JSON.parse(c.tags || '[]'),
+        language: c.language || 'plaintext',
+      }))
+
+    if (commandsToPublish.length === 0) {
+      return { success: false, error: 'No valid commands found', results: [] }
+    }
+
+    const results = await github.bulkPublishCommands(libraryId, commandsToPublish, (result, index, total) => {
+      // Send progress updates to renderer
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('library:bulkPublishProgress', { result, index, total })
+      }
+    })
+
+    const succeeded = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+    return { success: true, results, succeeded, failed }
+  } catch (error) {
+    console.error('Library bulkPublish error:', error)
+    return { success: false, error: (error as Error).message, results: [] }
+  }
+})
+
 ipcMain.handle('library:unpublish', async (_, libraryId: number, remotePath: string) => {
   if (typeof libraryId !== 'number' || typeof remotePath !== 'string' || !remotePath.trim()) {
     return { success: false, error: 'Invalid parameters' }

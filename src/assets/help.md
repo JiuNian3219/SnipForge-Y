@@ -14,6 +14,9 @@
 - **Shift+C** - Copy command template (with variables intact)
 - **N** - Add new command
 - **E** - Edit selected command
+- **P** - Publish selected command to a library
+- **Shift+P** - Bulk publish commands
+- **U** - Remove selected remote command from library
 - **Backspace** - Delete selected command
 
 ## Search

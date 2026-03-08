@@ -59,6 +59,8 @@ interface Window {
       getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
       publish: (libraryId: number, commandId: number) => Promise<{ success: boolean; path?: string; created?: boolean; error?: string }>
       unpublish: (libraryId: number, remotePath: string) => Promise<{ success: boolean; error?: string }>
+      bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: import('../shared/types').BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
+      onBulkPublishProgress: (callback: (data: { result: import('../shared/types').BulkPublishResult; index: number; total: number }) => void) => () => void
     }
   }
 }

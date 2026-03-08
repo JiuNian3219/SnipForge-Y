@@ -70,3 +70,12 @@ export interface AuthStatus {
   authenticated: boolean
   user: GitHubUser | null
 }
+
+export interface BulkPublishResult {
+  commandId: number
+  title: string
+  success: boolean
+  path?: string
+  created?: boolean
+  error?: string
+}

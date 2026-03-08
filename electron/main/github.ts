@@ -1,6 +1,6 @@
 import { safeStorage } from 'electron'
 import * as db from './database'
-import type { GitHubUser, LibraryManifest, RemoteCommand, SyncResult, Library } from '../../shared/types'
+import type { GitHubUser, LibraryManifest, RemoteCommand, SyncResult, Library, BulkPublishResult } from '../../shared/types'
 
 // ── Configuration ─────────────────────────────────────────────────
 // GitHub OAuth App client_id (public — safe to embed, no secret needed)
@@ -701,6 +701,47 @@ export async function unpublishCommand(
         const err = await deleteRes.json().catch(() => ({}))
         throw new Error(`Failed to delete: ${(err as any).message || deleteRes.status}`)
     }
+}
+
+export async function bulkPublishCommands(
+    libraryId: number,
+    commands: Array<{ id: number; title: string; body: string; description: string; tags: string[]; language: string }>,
+    onProgress?: (result: BulkPublishResult, index: number, total: number) => void
+): Promise<BulkPublishResult[]> {
+    const results: BulkPublishResult[] = []
+
+    for (let i = 0; i < commands.length; i++) {
+        const cmd = commands[i]
+        try {
+            const { path, created } = await publishCommand(libraryId, {
+                title: cmd.title,
+                body: cmd.body,
+                description: cmd.description,
+                tags: cmd.tags,
+                language: cmd.language,
+            })
+            const result: BulkPublishResult = {
+                commandId: cmd.id,
+                title: cmd.title,
+                success: true,
+                path,
+                created,
+            }
+            results.push(result)
+            onProgress?.(result, i, commands.length)
+        } catch (error) {
+            const result: BulkPublishResult = {
+                commandId: cmd.id,
+                title: cmd.title,
+                success: false,
+                error: (error as Error).message,
+            }
+            results.push(result)
+            onProgress?.(result, i, commands.length)
+        }
+    }
+
+    return results
 }
 
 export function getAllLibraries(): Library[] {

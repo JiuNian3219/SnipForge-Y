@@ -9,7 +9,8 @@ import HelpModal from './components/HelpModal.vue'
 import DescriptionModal from './components/DescriptionModal.vue'
 import TagSelector from './components/TagSelector.vue'
 import DuplicateResolutionModal from './components/DuplicateResolutionModal.vue'
-import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus, Upload, CloudOff } from 'lucide-vue-next'
+import BulkPublishModal from './components/BulkPublishModal.vue'
+import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus, Upload, CloudOff, PackagePlus } from 'lucide-vue-next'
 import { VList } from 'virtua/vue'
 import { extractVariables, substituteVariables, hasVariables, type VariableValues } from './utils/variables'
 import { exportCommands, importCommands, validateExportData, generateExportFilename, detectDuplicates, type DuplicateMatch, type ImportCommand } from './utils/importExport'
@@ -128,6 +129,7 @@ const showPublishModal = ref(false)
 const publishTargetCommandId = ref<number | null>(null)
 const publishing = ref(false)
 const unpublishing = ref(false)
+const showBulkPublishModal = ref(false)
 
 // Initialized libraries (can publish to these)
 const initializedLibraries = computed(() => {
@@ -941,7 +943,12 @@ const handleKeyboard = (event: KeyboardEvent) => {
     selectedCommandForEdit.value = null
     modalMode.value = 'add'
     showModal.value = true
-    }else if (event.key === 'p'){
+    }else if (event.key === 'P' && event.shiftKey){
+    event.preventDefault()
+    if (initializedLibraries.value.length > 0) {
+      showBulkPublishModal.value = true
+    }
+    }else if (event.key === 'p' && !event.shiftKey){
     event.preventDefault()
     const selectedCommand = filteredCommands.value.find(cmd => cmd.id === selectedCommandId.value)
     if (selectedCommand) {
@@ -1073,6 +1080,14 @@ const openDescriptionModal = (title: string, description: string) => {
       <div class="right-section">
         <button class="add-button" @click="modalMode = 'add'; selectedCommandForEdit = null; showModal = true" title="Add new command (n)">
           <CirclePlus :size="18" />
+        </button>
+        <button
+          v-if="initializedLibraries.length > 0"
+          class="bulk-publish-button"
+          @click="showBulkPublishModal = true"
+          title="Bulk publish (Shift+P)"
+        >
+          <PackagePlus :size="18" />
         </button>
         <button class="help-button" @click="showHelpModal = true" title="Help">
           <HelpCircle :size="16" />
@@ -1252,6 +1267,15 @@ const openDescriptionModal = (title: string, description: string) => {
         <button class="publish-cancel" @click="showPublishModal = false">Cancel</button>
       </div>
     </div>
+
+    <!-- Bulk Publish Modal -->
+    <BulkPublishModal
+      :show="showBulkPublishModal"
+      :commands="commands"
+      :libraries="initializedLibraries"
+      @cancel="showBulkPublishModal = false"
+      @done="showBulkPublishModal = false; loadCommands()"
+    />
 
     <!-- Notification Toast -->
     <Transition name="toast">
@@ -1488,6 +1512,7 @@ html, body, #app {
 
 /* Control buttons */
 .add-button,
+.bulk-publish-button,
 .help-button,
 .settings-button {
   background: none;
@@ -1507,12 +1532,14 @@ html, body, #app {
 }
 
 .add-button:focus-visible,
+.bulk-publish-button:focus-visible,
 .help-button:focus-visible,
 .settings-button:focus-visible {
   border-color: var(--accent);
 }
 
 .add-button:hover,
+.bulk-publish-button:hover,
 .help-button:hover,
 .settings-button:hover {
   background-color: var(--bg-surface);

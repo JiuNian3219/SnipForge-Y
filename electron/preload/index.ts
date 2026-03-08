@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron"
-import type { Command, Library, SyncResult, AuthStatus, GitHubUser } from "../../shared/types"
+import type { Command, Library, SyncResult, AuthStatus, GitHubUser, BulkPublishResult } from "../../shared/types"
 //expose db methods to renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // db methods
@@ -86,6 +86,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:publish', libraryId, commandId),
     unpublish: (libraryId: number, remotePath: string): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('library:unpublish', libraryId, remotePath),
+    bulkPublish: (libraryId: number, commandIds: number[]): Promise<{ success: boolean; results: BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }> =>
+      ipcRenderer.invoke('library:bulkPublish', libraryId, commandIds),
+    onBulkPublishProgress: (callback: (data: { result: BulkPublishResult; index: number; total: number }) => void) => {
+      ipcRenderer.on('library:bulkPublishProgress', (_, data) => callback(data))
+      return () => { ipcRenderer.removeAllListeners('library:bulkPublishProgress') }
+    },
   }
 })
 // tell the compiler what's availible on the window object
@@ -141,6 +147,8 @@ declare global {
         getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
         publish: (libraryId: number, commandId: number) => Promise<{ success: boolean; path?: string; created?: boolean; error?: string }>
         unpublish: (libraryId: number, remotePath: string) => Promise<{ success: boolean; error?: string }>
+        bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
+        onBulkPublishProgress: (callback: (data: { result: BulkPublishResult; index: number; total: number }) => void) => () => void
       }
     }
   }
