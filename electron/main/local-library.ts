@@ -265,6 +265,7 @@ export async function initLocalLibrary(libraryId: number, name: string, descript
     }
 
     const manifest: LibraryManifest = {
+        snipforge: 'library',
         name,
         description: description || '',
         format_version: '1.0',
@@ -320,6 +321,7 @@ export async function exportAsLibrary(input: ExportLibraryInput): Promise<string
 
     // Write manifest
     const manifest: LibraryManifest = {
+        snipforge: 'library',
         name,
         description: description || '',
         format_version: '1.0',
@@ -342,6 +344,7 @@ export async function exportAsLibrary(input: ExportLibraryInput): Promise<string
         usedNames.add(fileName)
 
         const commandData = {
+            snipforge: 'command' as const,
             title: cmd.title,
             body: cmd.body,
             description: cmd.description || '',

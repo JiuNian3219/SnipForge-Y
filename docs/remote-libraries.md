@@ -108,6 +108,7 @@ my-monorepo/
 **Manifest** (`.snipforge.json`):
 ```json
 {
+  "snipforge": "library",
   "name": "Cloud Platform K8s Commands",
   "description": "Kubernetes maintenance commands for the cloud platform team",
   "format_version": "1.0"
@@ -117,6 +118,7 @@ my-monorepo/
 **Command file** (`get-pods.json`):
 ```json
 {
+  "snipforge": "command",
   "title": "Get all pods in namespace",
   "body": "kubectl get pods -n {{namespace}}",
   "description": "Lists all running pods. Use `-o wide` for node info.",
@@ -398,7 +400,7 @@ Generalizes the library concept beyond GitHub. Any folder is a library. Export a
 **Deliverables:**
 - [x] Open a local folder as a library (issue [#6](https://github.com/ArtluxDM/SnipForge/issues/6))
 - [x] Library export — folder + manifest, zipped (issue [#7](https://github.com/ArtluxDM/SnipForge/issues/7))
-- [ ] Unified `snipforge` format identifier (issue [#8](https://github.com/ArtluxDM/SnipForge/issues/8))
+- [x] Unified `snipforge` format identifier (issue [#8](https://github.com/ArtluxDM/SnipForge/issues/8))
 
 **Export modes (two, not three):**
 - **Library export** — full folder (manifest + individual JSON files), zipped. Works for 1 command or 100.
@@ -410,6 +412,50 @@ Generalizes the library concept beyond GitHub. Any folder is a library. Export a
 - `"snipforge": "command"` — individual command file
 
 **Key principle:** Library is the canonical format for organization and sharing. Bundle is the convenience format for quick handoff.
+
+**Unified `snipforge` Format Identifier (issue [#8](https://github.com/ArtluxDM/SnipForge/issues/8)):**
+
+Every SnipForge file format gets a top-level `"snipforge"` field so the app can self-identify files without guessing:
+
+- `"snipforge": "library"` — manifest (`.snipforge.json`)
+- `"snipforge": "bundle"` — array of commands in one JSON file (export format)
+- `"snipforge": "command"` — individual command JSON file
+
+**Writes (add identifier to all outputs):**
+- `github.ts:initLibrary()` — manifest creation → add `"snipforge": "library"`
+- `local-library.ts:initLocalLibrary()` — manifest creation → add `"snipforge": "library"`
+- `local-library.ts:exportAsLibrary()` — manifest + command files → add both identifiers
+- `github.ts:publishCommand()` — command file → add `"snipforge": "command"`
+- `importExport.ts:exportCommands()` — bundle export → add `"snipforge": "bundle"`
+
+**Reads (detect by identifier, fall back to heuristics):**
+- `importExport.ts:validateExportData()` — detect `snipforge: "bundle"`, fall back to `version` + `commands` check for old files
+- Import handler (`App.vue:handleImport()`) — detect `snipforge: "command"` for single-command import (wrap as bundle), detect `snipforge: "library"` to show a user-friendly error ("use Open Folder instead")
+- Manifest parsing in `github.ts:browseLibrary()` and `local-library.ts:scanLocalFolder()` — no behavior change needed (manifests are already identified by filename)
+
+**Type changes:**
+- `shared/types.ts:LibraryManifest` — add optional `snipforge?: string` field
+- `src/utils/importExport.ts:ExportData` — add `snipforge: string` field
+
+**Backwards compatibility:**
+- All read paths fall back to current heuristics when `"snipforge"` field is absent
+- Old bundles without `snipforge: "bundle"` still import via `version` + `commands` check
+- Old command files without `snipforge: "command"` still validate via `title` + `body` check
+
+**Implementation notes:**
+- Import gains single-command support as a side effect: `validateExportData()` detects `snipforge: "command"` or bare `title`+`body` files and wraps them as a one-item bundle. This means any command JSON file (from a library, publish, or export) is directly importable via the import dialog.
+- Manifest detection shows a user-friendly error pointing to "Open Folder" instead of a cryptic validation failure.
+- The `snipforge` field is always first in the JSON output for easy identification when reading files manually.
+
+**Verification:**
+1. Export as bundle → file contains `"snipforge": "bundle"` at top level
+2. Export as library → manifest has `"snipforge": "library"`, command files have `"snipforge": "command"`
+3. Publish to GitHub → command JSON has `"snipforge": "command"`
+4. Init library (GitHub + local) → manifest has `"snipforge": "library"`
+5. Import old bundle (no identifier) → still works (heuristic fallback)
+6. Import a single command JSON file → detected by `snipforge: "command"`, imported correctly
+7. Import a bare command file (old format, no identifier) → detected by title+body heuristic, imported correctly
+8. Import a manifest file → friendly error: "use Open Folder"
 
 **Open Local Folder as Library (issue [#6](https://github.com/ArtluxDM/SnipForge/issues/6)):**
 

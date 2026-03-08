@@ -22,6 +22,7 @@ export interface ExportCommand {
 }
 
 export interface ExportData {
+  snipforge?: string
   version: string
   exported_at: string
   total_commands: number
@@ -63,6 +64,7 @@ export function exportCommands(
   }))
 
   const exportData: ExportData = {
+    snipforge: 'bundle',
     version: '2.0',
     exported_at: new Date().toISOString(),
     total_commands: exportCommands.length,
@@ -114,7 +116,29 @@ export function validateExportData(data: any): data is ExportData {
     throw new Error('Invalid export data: not an object')
   }
 
-  if (!data.version) {
+  // Detect format by snipforge identifier
+  if (data.snipforge === 'library') {
+    throw new Error('This is a library manifest — use "Open Folder" in Libraries settings to import a library')
+  }
+  if (data.snipforge === 'command') {
+    // Single command file — wrap as a bundle for import
+    if (typeof data.title === 'string' && typeof data.body === 'string') {
+      data.commands = [data]
+      data.version = '1.0'
+      return true
+    }
+    throw new Error('Invalid command file: missing title or body')
+  }
+
+  // Heuristic: bare command file (no identifier, but has title+body and no commands array)
+  if (!data.snipforge && typeof data.title === 'string' && typeof data.body === 'string' && !data.commands) {
+    data.commands = [data]
+    data.version = '1.0'
+    return true
+  }
+
+  // Bundle: validate by identifier or fall back to heuristics (version + commands)
+  if (!data.version && data.snipforge !== 'bundle') {
     throw new Error('Invalid export data: missing version')
   }
 

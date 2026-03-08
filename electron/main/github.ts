@@ -531,6 +531,7 @@ export async function initLibrary(libraryId: number, name: string, description: 
 
     // Create the manifest content
     const manifest: LibraryManifest = {
+        snipforge: 'library',
         name,
         description: description || '',
         format_version: '1.0',
@@ -610,6 +611,7 @@ export async function publishCommand(
     // Build the command JSON content
     const now = new Date().toISOString()
     const commandJson = {
+        snipforge: 'command' as const,
         title: command.title,
         body: command.body,
         description: command.description || '',

@@ -46,6 +46,7 @@ export interface RemoteCommand {
 }
 
 export interface LibraryManifest {
+  snipforge?: string
   name: string
   description: string
   format_version: string
