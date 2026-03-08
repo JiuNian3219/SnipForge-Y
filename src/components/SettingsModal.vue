@@ -96,7 +96,7 @@
             <div class="section-header-row">
               <h3>Libraries</h3>
               <button
-                v-if="authStatus.authenticated"
+                v-if="libraries.length > 0"
                 @click="handleSyncAll"
                 class="sync-all-button"
                 :disabled="syncing"
@@ -110,22 +110,36 @@
               </button>
             </div>
 
-            <!-- Subscribe to new library -->
-            <div v-if="authStatus.authenticated" class="subscribe-form">
-              <input
-                v-model="newRepoUrl"
-                type="text"
-                class="repo-input"
-                placeholder="owner/repo or GitHub URL"
-                @keydown.enter="handleSubscribe"
-                :disabled="subscribing"
-              />
+            <!-- Add library controls -->
+            <div class="add-library-row">
+              <!-- Subscribe to GitHub repo -->
+              <div v-if="authStatus.authenticated" class="subscribe-form">
+                <input
+                  v-model="newRepoUrl"
+                  type="text"
+                  class="repo-input"
+                  placeholder="owner/repo or GitHub URL"
+                  @keydown.enter="handleSubscribe"
+                  :disabled="subscribing"
+                />
+                <button
+                  @click="handleSubscribe"
+                  class="subscribe-button"
+                  :disabled="subscribing || !newRepoUrl.trim()"
+                >
+                  {{ subscribing ? 'Adding...' : 'Subscribe' }}
+                </button>
+              </div>
+              <!-- Open local folder -->
               <button
-                @click="handleSubscribe"
-                class="subscribe-button"
-                :disabled="subscribing || !newRepoUrl.trim()"
+                @click="handleOpenLocalFolder"
+                class="open-folder-button"
+                :disabled="subscribing"
               >
-                {{ subscribing ? 'Adding...' : 'Subscribe' }}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Open Folder
               </button>
             </div>
 
@@ -136,8 +150,17 @@
             <div v-if="libraries.length > 0" class="library-list">
               <div v-for="lib in libraries" :key="lib.id" class="library-item">
                 <div class="library-info">
-                  <span class="library-name">{{ lib.name }}</span>
-                  <span class="library-repo">{{ lib.github_repo }}</span>
+                  <span class="library-name">
+                    <!-- Folder icon for local, GitHub icon for remote -->
+                    <svg v-if="lib.type === 'local'" class="library-type-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <svg v-else class="library-type-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    {{ lib.name }}
+                  </span>
+                  <span class="library-repo" :title="lib.github_repo">{{ lib.type === 'local' ? shortenPath(lib.github_repo) : lib.github_repo }}</span>
                   <span v-if="!lib.manifest_path" class="library-status not-initialized">
                     Not initialized
                   </span>
@@ -171,9 +194,9 @@
                     </button>
                   </template>
                   <button
-                    @click="handleUnsubscribe(lib.id, lib.name)"
+                    @click="handleRemoveLibrary(lib)"
                     class="library-action-btn danger"
-                    title="Unsubscribe"
+                    :title="lib.type === 'local' ? 'Remove' : 'Unsubscribe'"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -183,12 +206,9 @@
                 </div>
               </div>
             </div>
-            <div v-else-if="authStatus.authenticated" class="empty-libraries">
-              <p>No library subscriptions yet.</p>
-              <p class="section-description">Enter a GitHub repo above to subscribe.</p>
-            </div>
             <div v-else class="empty-libraries">
-              <p>Sign in with GitHub to subscribe to remote libraries.</p>
+              <p>No libraries yet.</p>
+              <p class="section-description">Open a local folder or subscribe to a GitHub repo.</p>
             </div>
 
             <!-- Sync result notification -->
@@ -296,7 +316,7 @@
             @keydown.enter="handleInitLibrary"
           />
         </div>
-        <div class="init-modal-field">
+        <div v-if="initModal.type !== 'local'" class="init-modal-field">
           <label>Location <span class="field-hint">(where to create .snipforge.json)</span></label>
           <div class="location-combobox" @click.stop>
             <div class="location-input-wrap">
@@ -418,6 +438,7 @@ const initModal = ref({
   visible: false,
   libraryId: 0,
   repo: '',
+  type: 'github' as 'github' | 'local',
   name: '',
   description: '',
   subpath: '',
@@ -432,23 +453,26 @@ async function openInitModal(lib: Library) {
   initModal.value = {
     visible: true,
     libraryId: lib.id,
-    repo: lib.github_repo,
+    repo: lib.type === 'local' ? shortenPath(lib.github_repo) : lib.github_repo,
+    type: lib.type || 'github',
     name: prettyName,
     description: '',
     subpath: '',
     error: '',
     folders: [],
-    foldersLoading: true,
+    foldersLoading: lib.type !== 'local',
   }
 
-  // Fetch repo folders in the background
-  try {
-    const result = await (window.electronAPI as any).library.getRepoFolders(lib.github_repo)
-    if (result.success) {
-      initModal.value.folders = result.folders
-    }
-  } catch { /* ignore — dropdown just shows root */ }
-  initModal.value.foldersLoading = false
+  // Only fetch folders for GitHub repos (local libraries always use root)
+  if (lib.type !== 'local') {
+    try {
+      const result = await (window.electronAPI as any).library.getRepoFolders(lib.github_repo)
+      if (result.success) {
+        initModal.value.folders = result.folders
+      }
+    } catch { /* ignore — dropdown just shows root */ }
+    initModal.value.foldersLoading = false
+  }
 }
 
 let suppressFocusOpen = false
@@ -671,8 +695,60 @@ async function handleSubscribe() {
   }
 }
 
-async function handleUnsubscribe(libraryId: number, name: string) {
-  if (!confirm(`Unsubscribe from "${name}"? This will remove all commands from this library.`)) return
+async function handleOpenLocalFolder() {
+  subscribing.value = true
+  libraryError.value = ''
+  syncMessage.value = ''
+
+  try {
+    const result = await (window.electronAPI as any).library.openLocal()
+    if (!result.success) {
+      if (result.error !== 'cancelled') {
+        libraryError.value = result.error || 'Failed to open folder'
+      }
+      return
+    }
+    await loadLibraries()
+    const lib = result.library
+    const sr = result.syncResult
+    if (!lib?.manifest_path) {
+      syncMessage.value = `Added folder. Click Init to create a library manifest.`
+    } else {
+      syncMessage.value = `Opened library! Added ${sr?.added || 0} commands.`
+    }
+    syncMessageType.value = 'success'
+    emit('libraries-changed')
+    clearSyncMessage()
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  } finally {
+    subscribing.value = false
+  }
+}
+
+function shortenPath(fullPath: string): string {
+  // Show last 2 path segments for readability, e.g. "~/Projects/my-commands"
+  const parts = fullPath.replace(/\/$/, '').split('/')
+  if (parts.length <= 3) return fullPath
+  const home = parts[0] === '' && parts[1] === 'Users' && parts.length > 2
+  if (home) {
+    return '~/' + parts.slice(3).join('/')
+  }
+  return '.../' + parts.slice(-2).join('/')
+}
+
+function handleRemoveLibrary(lib: Library) {
+  if (lib.type === 'local') {
+    handleUnsubscribe(lib.id, lib.name, true)
+  } else {
+    handleUnsubscribe(lib.id, lib.name, false)
+  }
+}
+
+async function handleUnsubscribe(libraryId: number, name: string, isLocal = false) {
+  const action = isLocal ? 'Remove' : 'Unsubscribe from'
+  const detail = isLocal ? 'This will remove the commands from your list. The folder and its files will not be touched.' : 'This will remove all commands from this library.'
+  if (!confirm(`${action} "${name}"? ${detail}`)) return
   try {
     const result = await (window.electronAPI as any).library.unsubscribe(libraryId)
     if (result.success) {
@@ -1892,6 +1968,50 @@ const handleBulkExport = () => {
   cursor: not-allowed;
 }
 
+.add-library-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.add-library-row .subscribe-form {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.open-folder-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.open-folder-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.open-folder-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.library-type-icon {
+  vertical-align: -1px;
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
 .library-error {
   color: #ef5350;
   font-size: 13px;
@@ -1939,6 +2059,9 @@ const handleBulkExport = () => {
   color: var(--text-tertiary);
   font-size: 12px;
   font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .library-synced {

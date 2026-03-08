@@ -219,6 +219,7 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 | File | Purpose |
 |------|---------|
 | `electron/main/github.ts` | GitHub API client: auth, repo operations, sync |
+| `electron/main/local-library.ts` | Local folder scanning, sync, init |
 | `electron/main/database.ts` | DB schema, migrations, library/auth CRUD |
 | `electron/main/index.ts` | IPC handlers for auth + libraries |
 | `electron/preload/index.ts` | Exposes auth + library channels to renderer |
@@ -389,10 +390,10 @@ Key changes:
 
 Generalizes the library concept beyond GitHub. Any folder is a library. Export and import align with the library format.
 
-**Local libraries (folder-as-vault):**
-- Open a local folder as a library (like Obsidian "Open Vault")
-- Same format as remote libraries: `.snipforge.json` manifest + individual command JSON files
-- Unifies local folder import with the remote library model
+**Deliverables:**
+- [x] Open a local folder as a library (issue [#6](https://github.com/ArtluxDM/SnipForge/issues/6))
+- [ ] Library export — folder + manifest, zipped (issue [#7](https://github.com/ArtluxDM/SnipForge/issues/7))
+- [ ] Unified `snipforge` format identifier (issue [#8](https://github.com/ArtluxDM/SnipForge/issues/8))
 
 **Export modes (two, not three):**
 - **Library export** — full folder (manifest + individual JSON files), zipped. Works for 1 command or 100.
@@ -404,6 +405,35 @@ Generalizes the library concept beyond GitHub. Any folder is a library. Export a
 - `"snipforge": "command"` — individual command file
 
 **Key principle:** Library is the canonical format for organization and sharing. Bundle is the convenience format for quick handoff.
+
+**Open Local Folder as Library (issue [#6](https://github.com/ArtluxDM/SnipForge/issues/6)):**
+
+Flow: click "Open Folder" button in Libraries settings → native folder picker → app validates the folder (looks for `.snipforge.json`) → if found, scans command JSONs and imports → if not found, creates library record as uninitialized (same pattern as GitHub subscribe without manifest).
+
+Key details:
+- Libraries gain a `type` column: `'github'` (default) or `'local'`
+- Local libraries store the absolute folder path in `github_repo` column (reusing the column avoids migration complexity)
+- Scanning uses the same validation rules as GitHub: find `.snipforge.json`, scope to its directory, validate JSON files (must have `title` + `body` strings)
+- Sync is always a full diff (no SHA optimization — local FS reads are fast). `last_synced_sha` stores a content hash for display purposes only.
+- Init for local libraries writes `.snipforge.json` directly to the folder (no GitHub API)
+- Body dedup applies: local commands with matching bodies are skipped during scan
+
+Key changes:
+- `shared/types.ts`: add `LibraryType = 'github' | 'local'`, add `type: LibraryType` to `Library`
+- `database.ts`: migration for `type` column, pass type through `addLibrary()`
+- `electron/main/local-library.ts` — NEW: filesystem scanning (`scanLocalFolder`, `syncLocalLibrary`, `initLocalLibrary`)
+- `index.ts`: `library:openLocal` IPC handler (folder picker + validation), dispatch `library:sync` by type
+- `preload/index.ts`: expose `openLocal` channel + type declaration
+- `SettingsModal.vue`: "Open Folder" button, local library cards (folder icon, path display, sync/remove controls)
+
+**Verification:**
+1. Click "Open Folder" → pick a folder with `.snipforge.json` → commands appear in main list
+2. Add a JSON file to the folder → sync → new command appears
+3. Remove a JSON file → sync → command disappears
+4. Open a folder without manifest → library shows as uninitialized with Init button
+5. Click Init → manifest created on disk → sync works
+6. Unsubscribe → commands removed, folder untouched
+7. Local library cards show folder path and folder icon (not GitHub icon)
 
 #### Phase 5: Polish
 

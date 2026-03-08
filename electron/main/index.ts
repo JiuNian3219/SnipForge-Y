@@ -6,6 +6,7 @@ import os from 'node:os'
 import { promises as fs } from 'node:fs'
 import * as db from './database'
 import * as github from './github'
+import * as localLibrary from './local-library'
 
 // Enable remote debugging when REMOTE_DEBUG env var is set (e.g. REMOTE_DEBUG=9222)
 if (process.env.REMOTE_DEBUG) {
@@ -579,7 +580,14 @@ ipcMain.handle('library:sync', async (_, libraryId: number) => {
     return { success: false, error: 'Invalid library ID' }
   }
   try {
-    const result = await github.syncLibrary(libraryId, true)
+    // Dispatch by library type
+    const libraries = db.getAllLibraries()
+    const library = libraries.find(l => l.id === libraryId)
+    if (!library) return { success: false, error: 'Library not found' }
+
+    const result = library.type === 'local'
+      ? await localLibrary.syncLocalLibrary(libraryId, true)
+      : await github.syncLibrary(libraryId, true)
     return { success: true, ...result }
   } catch (error) {
     console.error('Library sync error:', error)
@@ -589,7 +597,24 @@ ipcMain.handle('library:sync', async (_, libraryId: number) => {
 
 ipcMain.handle('library:syncAll', async () => {
   try {
-    const { results } = await github.syncAllLibraries()
+    const allLibraries = db.getAllLibraries()
+    const results: Array<{ library: typeof allLibraries[0]; result: { added: number; updated: number; removed: number; errors: string[] } }> = []
+
+    for (const library of allLibraries) {
+      try {
+        const result = library.type === 'local'
+          ? await localLibrary.syncLocalLibrary(library.id)
+          : await github.syncLibrary(library.id)
+        const updated = db.getLibraryByRepo(library.github_repo)
+        results.push({ library: updated || library, result })
+      } catch (e) {
+        results.push({
+          library,
+          result: { added: 0, updated: 0, removed: 0, errors: [(e as Error).message] }
+        })
+      }
+    }
+
     return { success: true, results }
   } catch (error) {
     console.error('Library syncAll error:', error)
@@ -611,7 +636,14 @@ ipcMain.handle('library:init', async (_, libraryId: number, name: string, descri
     return { success: false, error: 'Invalid parameters' }
   }
   try {
-    const { library, syncResult } = await github.initLibrary(libraryId, name.trim(), (description || '').trim(), subpath)
+    // Dispatch by library type
+    const libraries = db.getAllLibraries()
+    const lib = libraries.find(l => l.id === libraryId)
+    if (!lib) return { success: false, error: 'Library not found' }
+
+    const { library, syncResult } = lib.type === 'local'
+      ? await localLibrary.initLocalLibrary(libraryId, name.trim(), (description || '').trim())
+      : await github.initLibrary(libraryId, name.trim(), (description || '').trim(), subpath)
     return { success: true, library, syncResult }
   } catch (error) {
     console.error('Library init error:', error)
@@ -709,6 +741,25 @@ ipcMain.handle('library:unpublish', async (_, libraryId: number, remotePath: str
     return { success: true }
   } catch (error) {
     console.error('Library unpublish error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:openLocal', async () => {
+  if (!win) return { success: false, error: 'No window' }
+  try {
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Open Library Folder',
+      properties: ['openDirectory'],
+    })
+    if (result.canceled || !result.filePaths[0]) {
+      return { success: false, error: 'cancelled' }
+    }
+    const folderPath = result.filePaths[0]
+    const { library, syncResult } = await localLibrary.openLocalFolder(folderPath)
+    return { success: true, library, syncResult }
+  } catch (error) {
+    console.error('Library openLocal error:', error)
     return { success: false, error: (error as Error).message }
   }
 })

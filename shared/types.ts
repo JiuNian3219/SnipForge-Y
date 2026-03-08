@@ -21,9 +21,12 @@ export interface CommandWithTags extends Command {
 
 export type CommandSource = 'local' | 'remote'
 
+export type LibraryType = 'github' | 'local'
+
 export interface Library {
   id: number
-  github_repo: string       // "org/repo-name"
+  github_repo: string       // "org/repo-name" for GitHub, absolute path for local
+  type: LibraryType
   name: string
   description: string
   manifest_path: string | null  // null = not initialized (no .snipforge.json)
