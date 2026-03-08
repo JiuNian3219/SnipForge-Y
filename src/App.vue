@@ -12,7 +12,7 @@ import DuplicateResolutionModal from './components/DuplicateResolutionModal.vue'
 import BulkPublishModal from './components/BulkPublishModal.vue'
 import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus, Upload, CloudOff, PackagePlus } from 'lucide-vue-next'
 import { VList } from 'virtua/vue'
-import { extractVariables, substituteVariables, hasVariables, type VariableValues } from './utils/variables'
+import { extractVariables, substituteVariables, hasVariables, highlightVariables, type VariableValues } from './utils/variables'
 import { exportCommands, importCommands, validateExportData, generateExportFilename, detectDuplicates, type DuplicateMatch, type ImportCommand } from './utils/importExport'
 import { fuzzySearchCommands } from './utils/fuzzySearch'
 import { getAllTags } from './utils/tags'
@@ -296,12 +296,17 @@ const stripHtml = (html: string): string => {
   return div.textContent || div.innerText || ''
 }
 
-// Get preview text for command body (strip HTML for richtext)
+// Get preview HTML for command body (strip HTML for richtext, highlight variables)
 const getCommandPreview = (body: string, language: string): string => {
+  let text: string
   if (language === 'richtext' || language === 'markdown') {
-    return stripHtml(body)
+    text = stripHtml(body)
+  } else {
+    text = body
   }
-  return body
+  // Escape HTML to prevent XSS, then highlight {{variables}}
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return DOMPurify.sanitize(highlightVariables(escaped))
 }
 
 // LRU cache for rendered content (markdown/HTML) - max 100 entries
@@ -1163,7 +1168,7 @@ const openDescriptionModal = (title: string, description: string) => {
                   <HelpCircle :size="14" />
                 </button>
               </div>
-              <div class="command-body">{{ getCommandPreview(command.body, command.language) }}</div>
+              <div class="command-body" v-html="getCommandPreview(command.body, command.language)"></div>
             </div>
             <div class="command-actions">
               <button @click.stop="copyCommand(command)" tabindex="-1" title="Copy command">
@@ -1701,6 +1706,11 @@ html, body, #app {
 
 .command-item.selected .command-body {
   color: var(--text-primary);
+}
+
+.variable-highlight {
+  color: #e8a948;
+  font-weight: 500;
 }
 
 /* Command actions */

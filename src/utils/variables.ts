@@ -64,6 +64,17 @@ export function hasVariables(text: string): boolean {
 }
 
 /**
+ * Returns HTML with {{variable}} placeholders wrapped in highlight spans.
+ * Input text must be HTML-escaped before calling this function.
+ */
+export function highlightVariables(escapedHtml: string): string {
+  return escapedHtml.replace(
+    /\{\{([^}]+)\}\}/g,
+    '<span class="variable-highlight">{{$1}}</span>'
+  )
+}
+
+/**
  * Type definition for variable values
  */
 export interface VariableValues {
