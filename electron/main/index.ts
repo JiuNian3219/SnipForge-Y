@@ -764,6 +764,63 @@ ipcMain.handle('library:openLocal', async () => {
   }
 })
 
+ipcMain.handle('library:exportZip', async (_, commandIds: number[], name: string, description: string) => {
+  if (!win) return { success: false, error: 'No window' }
+  try {
+    // Fetch commands from DB
+    const allCommands = db.getAllCommands()
+    const selected = commandIds.length > 0
+      ? allCommands.filter(cmd => commandIds.includes(cmd.id))
+      : allCommands.filter(cmd => cmd.source === 'local') // default: all local commands
+
+    if (selected.length === 0) {
+      return { success: false, error: 'No commands to export' }
+    }
+
+    // Prepare command data
+    const commands = selected.map(cmd => ({
+      title: cmd.title,
+      body: cmd.body,
+      description: cmd.description || '',
+      tags: (() => { try { return JSON.parse(cmd.tags) } catch { return [] } })(),
+      language: cmd.language || 'plaintext',
+      created_at: cmd.created_at,
+      updated_at: cmd.updated_at,
+    }))
+
+    // Generate zip
+    const zipPath = await localLibrary.exportAsLibrary({ name, description, commands })
+
+    // Show save dialog
+    const slugName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'snipforge-library'
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Export Library',
+      defaultPath: `${slugName}.zip`,
+      filters: [
+        { name: 'ZIP Archive', extensions: ['zip'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    })
+
+    if (result.canceled || !result.filePath) {
+      // Clean up temp zip
+      await fs.rm(path.dirname(zipPath), { recursive: true, force: true })
+      return { success: false, error: 'cancelled' }
+    }
+
+    // Copy zip to chosen location
+    await fs.copyFile(zipPath, result.filePath)
+
+    // Clean up temp directory
+    await fs.rm(path.dirname(zipPath), { recursive: true, force: true })
+
+    return { success: true, path: result.filePath, commandCount: selected.length }
+  } catch (error) {
+    console.error('Library export error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
 ipcMain.handle('library:browse', async (_, repoUrl: string) => {
   if (typeof repoUrl !== 'string' || !repoUrl.trim()) {
     return { success: false, error: 'Invalid repository URL' }

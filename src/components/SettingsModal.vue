@@ -273,6 +273,12 @@
                 >
                   Export
                 </button>
+                <button
+                  @click="openExportLibraryModal"
+                  class="action-button export-library-button"
+                >
+                  Export as Library
+                </button>
               </div>
             </div>
           </div>
@@ -363,6 +369,46 @@
         </div>
       </div>
     </div>
+    <!-- Export as Library Modal -->
+    <div v-if="exportLibraryModal.visible" class="init-modal-overlay" @click.self="closeExportLibraryModal">
+      <div class="init-modal">
+        <h3>Export as Library</h3>
+        <p class="init-modal-repo">
+          {{ exportLibraryModal.commandCount }} command{{ exportLibraryModal.commandCount !== 1 ? 's' : '' }} will be exported
+        </p>
+        <div class="init-modal-field">
+          <label>Library Name</label>
+          <input
+            v-model="exportLibraryModal.name"
+            type="text"
+            class="init-modal-input"
+            placeholder="My Commands"
+            @keydown.enter="handleExportLibrary"
+          />
+        </div>
+        <div class="init-modal-field">
+          <label>Description</label>
+          <input
+            v-model="exportLibraryModal.description"
+            type="text"
+            class="init-modal-input"
+            placeholder="Optional description"
+            @keydown.enter="handleExportLibrary"
+          />
+        </div>
+        <p v-if="exportLibraryModal.error" class="init-modal-error">{{ exportLibraryModal.error }}</p>
+        <div class="init-modal-actions">
+          <button @click="closeExportLibraryModal" class="init-modal-cancel">Cancel</button>
+          <button
+            @click="handleExportLibrary"
+            class="init-modal-confirm"
+            :disabled="exportLibraryModal.exporting || !exportLibraryModal.name.trim()"
+          >
+            {{ exportLibraryModal.exporting ? 'Exporting...' : 'Export' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -387,6 +433,7 @@ interface Props {
     tagsArray: string[]
     tagsNormalized: string[]
     language?: string
+    source?: string
     created_at: string
     updated_at: string
   }>
@@ -531,6 +578,67 @@ async function handleInitLibrary() {
     initModal.value.error = (e as Error).message
   } finally {
     initializing.value = false
+  }
+}
+
+// ── Export as Library State ────────────────────────────────────
+const exportLibraryModal = ref({
+  visible: false,
+  name: '',
+  description: '',
+  commandCount: 0,
+  commandIds: [] as number[],
+  error: '',
+  exporting: false,
+})
+
+function openExportLibraryModal() {
+  const ids = selectedCommandIds.value.length > 0
+    ? [...selectedCommandIds.value]
+    : []
+  const count = ids.length > 0
+    ? ids.length
+    : props.commands.filter(c => c.source === 'local').length
+
+  exportLibraryModal.value = {
+    visible: true,
+    name: '',
+    description: '',
+    commandCount: count,
+    commandIds: ids,
+    error: '',
+    exporting: false,
+  }
+}
+
+function closeExportLibraryModal() {
+  exportLibraryModal.value.visible = false
+  exportLibraryModal.value.error = ''
+}
+
+async function handleExportLibrary() {
+  if (!exportLibraryModal.value.name.trim() || exportLibraryModal.value.exporting) return
+  exportLibraryModal.value.exporting = true
+  exportLibraryModal.value.error = ''
+
+  try {
+    const result = await window.electronAPI.library.exportZip(
+      exportLibraryModal.value.commandIds,
+      exportLibraryModal.value.name.trim(),
+      exportLibraryModal.value.description.trim(),
+    )
+    if (result.success) {
+      closeExportLibraryModal()
+      syncMessage.value = `Exported ${result.commandCount} command${result.commandCount !== 1 ? 's' : ''} as library`
+      syncMessageType.value = 'success'
+      clearSyncMessage()
+    } else if (result.error !== 'cancelled') {
+      exportLibraryModal.value.error = result.error || 'Export failed'
+    }
+  } catch (e) {
+    exportLibraryModal.value.error = (e as Error).message
+  } finally {
+    exportLibraryModal.value.exporting = false
   }
 }
 
@@ -1676,6 +1784,22 @@ const handleBulkExport = () => {
   color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.export-library-button {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.export-library-button:hover {
+  background-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.export-library-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .command-list-container {

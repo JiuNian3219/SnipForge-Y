@@ -1,6 +1,9 @@
 import { promises as fs } from 'node:fs'
+import { createWriteStream } from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import crypto from 'node:crypto'
+import archiver from 'archiver'
 import * as db from './database'
 import type { Library, LibraryManifest, RemoteCommand, SyncResult } from '../../shared/types'
 
@@ -274,4 +277,102 @@ export async function initLocalLibrary(libraryId: number, name: string, descript
     const syncResult = await syncLocalLibrary(libraryId, true)
     const updated = db.getLibraryByRepo(library.github_repo)!
     return { library: updated, syncResult }
+}
+
+// ── Export as Library (Zip) ─────────────────────────────────────
+
+function slugify(title: string): string {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/[\s_]+/g, '-')
+        .replace(/-+/g, '-')
+        || 'untitled'
+}
+
+export interface ExportLibraryInput {
+    name: string
+    description: string
+    commands: Array<{
+        title: string
+        body: string
+        description: string
+        tags: string[]
+        language: string
+        created_at: string
+        updated_at: string
+    }>
+}
+
+/**
+ * Creates a zip file containing a SnipForge library (manifest + command JSONs).
+ * Returns the path to the temporary zip file. Caller is responsible for cleanup.
+ */
+export async function exportAsLibrary(input: ExportLibraryInput): Promise<string> {
+    const { name, description, commands } = input
+    const folderName = slugify(name) || 'snipforge-library'
+
+    // Create temp directory
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'snipforge-export-'))
+    const libraryDir = path.join(tmpDir, folderName)
+    await fs.mkdir(libraryDir, { recursive: true })
+
+    // Write manifest
+    const manifest: LibraryManifest = {
+        name,
+        description: description || '',
+        format_version: '1.0',
+    }
+    await fs.writeFile(
+        path.join(libraryDir, '.snipforge.json'),
+        JSON.stringify(manifest, null, 2) + '\n',
+        'utf8'
+    )
+
+    // Write command files — deduplicate slugified filenames
+    const usedNames = new Set<string>()
+    for (const cmd of commands) {
+        let baseName = slugify(cmd.title)
+        let fileName = baseName
+        let counter = 1
+        while (usedNames.has(fileName)) {
+            fileName = `${baseName}-${++counter}`
+        }
+        usedNames.add(fileName)
+
+        const commandData = {
+            title: cmd.title,
+            body: cmd.body,
+            description: cmd.description || '',
+            tags: cmd.tags,
+            language: cmd.language || 'plaintext',
+            created_at: cmd.created_at,
+            updated_at: cmd.updated_at,
+        }
+        await fs.writeFile(
+            path.join(libraryDir, `${fileName}.json`),
+            JSON.stringify(commandData, null, 2) + '\n',
+            'utf8'
+        )
+    }
+
+    // Zip the folder
+    const zipPath = path.join(tmpDir, `${folderName}.zip`)
+    await new Promise<void>((resolve, reject) => {
+        const output = createWriteStream(zipPath)
+        const archive = archiver('zip', { zlib: { level: 9 } })
+
+        output.on('close', resolve)
+        archive.on('error', reject)
+
+        archive.pipe(output)
+        archive.directory(libraryDir, folderName)
+        archive.finalize()
+    })
+
+    // Clean up the unzipped folder (keep only the zip)
+    await fs.rm(libraryDir, { recursive: true, force: true })
+
+    return zipPath
 }

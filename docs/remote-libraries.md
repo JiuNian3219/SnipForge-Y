@@ -214,12 +214,17 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 | `library:unpublish` | Remove a command from the repo |
 | `library:bulkPublish` | Push multiple commands sequentially, with progress events |
 
+**Export (Phase 4):**
+| Channel | Purpose |
+|---------|---------|
+| `library:exportZip` | Export commands as zipped library (manifest + JSON files) |
+
 #### Key Files
 
 | File | Purpose |
 |------|---------|
 | `electron/main/github.ts` | GitHub API client: auth, repo operations, sync |
-| `electron/main/local-library.ts` | Local folder scanning, sync, init |
+| `electron/main/local-library.ts` | Local folder scanning, sync, init, library export |
 | `electron/main/database.ts` | DB schema, migrations, library/auth CRUD |
 | `electron/main/index.ts` | IPC handlers for auth + libraries |
 | `electron/preload/index.ts` | Exposes auth + library channels to renderer |
@@ -392,7 +397,7 @@ Generalizes the library concept beyond GitHub. Any folder is a library. Export a
 
 **Deliverables:**
 - [x] Open a local folder as a library (issue [#6](https://github.com/ArtluxDM/SnipForge/issues/6))
-- [ ] Library export — folder + manifest, zipped (issue [#7](https://github.com/ArtluxDM/SnipForge/issues/7))
+- [x] Library export — folder + manifest, zipped (issue [#7](https://github.com/ArtluxDM/SnipForge/issues/7))
 - [ ] Unified `snipforge` format identifier (issue [#8](https://github.com/ArtluxDM/SnipForge/issues/8))
 
 **Export modes (two, not three):**
@@ -434,6 +439,33 @@ Key changes:
 5. Click Init → manifest created on disk → sync works
 6. Unsubscribe → commands removed, folder untouched
 7. Local library cards show folder path and folder icon (not GitHub icon)
+
+**Library Export (issue [#7](https://github.com/ArtluxDM/SnipForge/issues/7)):**
+
+Flow: in Manage Commands tab, select commands (or none for all) → click "Export as Library" → small modal asks for library name + description → save dialog for `.zip` → app generates folder structure in temp dir, zips it, saves to chosen location.
+
+Key details:
+- Zip contains a folder named after the slugified library name, containing `.snipforge.json` + individual command JSON files
+- Command filenames are slugified from titles (same pattern as publishing: "Get Pods" → `get-pods.json`)
+- If no commands selected, exports all commands
+- The exported zip can be unzipped and opened as a local library (#6) — full round-trip
+- Uses `archiver` npm package for cross-platform zip creation
+- All work happens in the main process (temp dir → zip → save dialog → cleanup)
+
+Key changes:
+- `package.json`: add `archiver` + `@types/archiver` dependencies
+- `electron/main/local-library.ts`: new `exportAsLibrary()` — creates temp folder, writes manifest + command JSONs, zips with archiver, returns zip path. New `slugify()` (duplicated from `github.ts` — avoids coupling). Handles duplicate slugs by appending counter (`-2`, `-3`, etc.)
+- `electron/main/index.ts`: `library:exportZip` IPC handler — fetches commands from DB, calls exportAsLibrary, opens save dialog (zip filter), copies to chosen location, cleans up temp dir. When no command IDs specified, defaults to all local commands.
+- `electron/preload/index.ts`: expose `exportZip` channel + type declaration
+- `src/vite-env.d.ts`: added `exportZip` type declaration
+- `src/components/SettingsModal.vue`: "Export as Library" button (accent-colored border, next to existing Export), export library modal (reuses init modal pattern — name + description fields), `source` added to Props for local-command counting
+
+**Verification:**
+1. Select commands → Export as Library → enter name → save → zip appears at chosen location
+2. Unzip → folder contains `.snipforge.json` + individual command JSON files
+3. Open the unzipped folder as a local library (#6) → commands appear in main list (round-trip)
+4. Export with no selection → all commands exported
+5. Duplicate titles get unique filenames (no overwrites)
 
 #### Phase 5: Polish
 
