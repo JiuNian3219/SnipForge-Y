@@ -82,6 +82,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:init', libraryId, name, description, subpath),
     getRepoFolders: (repoUrl: string): Promise<{ success: boolean; folders: string[]; error?: string }> =>
       ipcRenderer.invoke('library:getRepoFolders', repoUrl),
+    publish: (libraryId: number, commandId: number): Promise<{ success: boolean; path?: string; created?: boolean; error?: string }> =>
+      ipcRenderer.invoke('library:publish', libraryId, commandId),
   }
 })
 // tell the compiler what's availible on the window object
@@ -135,6 +137,7 @@ declare global {
         browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
         init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
         getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
+        publish: (libraryId: number, commandId: number) => Promise<{ success: boolean; path?: string; created?: boolean; error?: string }>
       }
     }
   }

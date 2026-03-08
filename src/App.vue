@@ -9,7 +9,7 @@ import HelpModal from './components/HelpModal.vue'
 import DescriptionModal from './components/DescriptionModal.vue'
 import TagSelector from './components/TagSelector.vue'
 import DuplicateResolutionModal from './components/DuplicateResolutionModal.vue'
-import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus } from 'lucide-vue-next'
+import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus, Upload } from 'lucide-vue-next'
 import { VList } from 'virtua/vue'
 import { extractVariables, substituteVariables, hasVariables, type VariableValues } from './utils/variables'
 import { exportCommands, importCommands, validateExportData, generateExportFilename, detectDuplicates, type DuplicateMatch, type ImportCommand } from './utils/importExport'
@@ -123,6 +123,16 @@ const showDuplicateModal = ref(false)
 const pendingDuplicates = ref<DuplicateMatch[]>([])
 const pendingImportCommands = ref<ImportCommand[]>([])
 
+// Publish modal state
+const showPublishModal = ref(false)
+const publishTargetCommandId = ref<number | null>(null)
+const publishing = ref(false)
+
+// Initialized libraries (can publish to these)
+const initializedLibraries = computed(() => {
+  return Array.from(libraries.value.values()).filter(lib => lib.manifest_path)
+})
+
 // Notification state
 const notificationMessage = ref('')
 const showNotification = ref(false)
@@ -148,7 +158,7 @@ const loadCommands = async () => {
     // Load commands and libraries in parallel
     const [dbCommands, dbLibraries] = await Promise.all([
       window.electronAPI.database.getAllCommands(),
-      (window.electronAPI as any).library.getAll() as Promise<Library[]>
+      window.electronAPI.library.getAll() as Promise<Library[]>
     ])
     // Pre-parse and pre-normalize tags for performance
     commands.value = dbCommands.map(cmd => {
@@ -739,6 +749,43 @@ const deleteCommand = async (id: number) => {
     modalMode.value = 'edit'
     showModal.value = true
   }
+  // Publish command to a library
+  const startPublish = (commandId: number) => {
+    const libs = initializedLibraries.value
+    if (libs.length === 0) {
+      showNotificationToast('No initialized libraries — subscribe and init a library first')
+      return
+    }
+    if (libs.length === 1) {
+      // Only one library — publish directly
+      doPublish(libs[0].id, commandId)
+    } else {
+      // Multiple libraries — show picker
+      publishTargetCommandId.value = commandId
+      showPublishModal.value = true
+    }
+  }
+
+  const doPublish = async (libraryId: number, commandId: number) => {
+    publishing.value = true
+    showPublishModal.value = false
+    try {
+      const result = await window.electronAPI.library.publish(libraryId, commandId)
+      if (result.success) {
+        const lib = libraries.value.get(libraryId)
+        const action = result.created ? 'Published' : 'Updated'
+        showNotificationToast(`${action} to ${lib?.name || 'library'}`)
+      } else {
+        showNotificationToast(`Publish failed: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Publish error:', error)
+      showNotificationToast('Failed to publish command')
+    } finally {
+      publishing.value = false
+    }
+  }
+
   // Handle modal save
   const handleModalSave = async (formData: { title: string; body: string; description: string; tags: string; language: string }) =>
    {
@@ -797,6 +844,8 @@ const handleKeyboard = (event: KeyboardEvent) => {
       showHelpModal.value = false
     } else if (showDescriptionModal.value) {
       showDescriptionModal.value = false
+    } else if (showPublishModal.value) {
+      showPublishModal.value = false
     } else if (showFilterDropdown.value) {
       showFilterDropdown.value = false
     } else if (selectedCommandId.value !== null) {
@@ -822,7 +871,7 @@ const handleKeyboard = (event: KeyboardEvent) => {
   }
 
   // Don't process hotkeys when modal is open or filter dropdown is open
-  if (showModal.value || showVariableModal.value || showSettingsModal.value || showHelpModal.value || showDescriptionModal.value || showDuplicateModal.value || showFilterDropdown.value) return
+  if (showModal.value || showVariableModal.value || showSettingsModal.value || showHelpModal.value || showDescriptionModal.value || showDuplicateModal.value || showPublishModal.value || showFilterDropdown.value) return
 
   // Don't process hotkeys when user is typing in an input field
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
@@ -863,6 +912,12 @@ const handleKeyboard = (event: KeyboardEvent) => {
     selectedCommandForEdit.value = null
     modalMode.value = 'add'
     showModal.value = true
+    }else if (event.key === 'p'){
+    event.preventDefault()
+    const selectedCommand = filteredCommands.value.find(cmd => cmd.id === selectedCommandId.value)
+    if (selectedCommand) {
+      startPublish(selectedCommand.id)
+    }
     }else if (event.key === 'Backspace'){
       event.preventDefault()
       const selectedCommand = filteredCommands.value.find(cmd => cmd.id === selectedCommandId.value)
@@ -1060,6 +1115,15 @@ const openDescriptionModal = (title: string, description: string) => {
               <button @click.stop="copyCommand(command)" tabindex="-1" title="Copy command">
                 <Copy :size="16" />
               </button>
+              <button
+                v-if="initializedLibraries.length > 0"
+                @click.stop="startPublish(command.id)"
+                tabindex="-1"
+                title="Publish to library"
+                :disabled="publishing"
+              >
+                <Upload :size="16" />
+              </button>
               <button @click.stop="editCommand(command.id)" tabindex="-1" title="Edit command">
                 <Edit :size="16" />
               </button>
@@ -1123,6 +1187,26 @@ const openDescriptionModal = (title: string, description: string) => {
       @cancel="showDuplicateModal = false"
       @apply="handleDuplicateResolution"
     />
+
+    <!-- Publish to Library Modal -->
+    <div v-if="showPublishModal" class="modal-overlay" @click.self="showPublishModal = false">
+      <div class="publish-modal">
+        <h3>Publish to Library</h3>
+        <p class="publish-description">Choose a library to publish this command to:</p>
+        <div class="publish-library-list">
+          <button
+            v-for="lib in initializedLibraries"
+            :key="lib.id"
+            class="publish-library-option"
+            @click="doPublish(lib.id, publishTargetCommandId!)"
+          >
+            <span class="publish-library-name">{{ lib.name }}</span>
+            <span class="publish-library-repo">{{ lib.github_repo }}</span>
+          </button>
+        </div>
+        <button class="publish-cancel" @click="showPublishModal = false">Cancel</button>
+      </div>
+    </div>
 
     <!-- Notification Toast -->
     <Transition name="toast">
@@ -1736,6 +1820,78 @@ html, body, #app {
 }
 
 /* Notification Toast */
+/* Publish Modal */
+.publish-modal {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 400px;
+}
+
+.publish-modal h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.publish-description {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.publish-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.publish-library-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.publish-library-option:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.publish-library-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.publish-library-repo {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.publish-cancel {
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.publish-cancel:hover {
+  background: var(--bg-surface);
+}
+
 .notification-toast {
   position: fixed;
   bottom: 24px;

@@ -410,7 +410,12 @@ export async function syncLibrary(libraryId: number, force = false): Promise<Syn
         }
         throw e
     }
-    const { commands: remoteCommands } = browseResult
+    const { manifestPath, commands: remoteCommands } = browseResult
+
+    // Correct manifest_path if it drifted (e.g., old record pointed to root)
+    if (manifestPath && manifestPath !== library.manifest_path) {
+        db.updateLibraryManifest(libraryId, library.name, library.description, manifestPath)
+    }
 
     // Get current local remote commands for this library
     const localRemote = db.getRemoteCommands(libraryId)
@@ -569,6 +574,96 @@ export async function getRepoFolders(repoUrl: string): Promise<string[]> {
         .sort()
 
     return folders
+}
+
+// ── Publishing ────────────────────────────────────────────────────
+
+function slugify(title: string): string {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')   // strip non-alphanumeric (keep spaces/hyphens)
+        .trim()
+        .replace(/[\s_]+/g, '-')          // spaces/underscores → hyphens
+        .replace(/-+/g, '-')              // collapse multiple hyphens
+        || 'untitled'
+}
+
+export async function publishCommand(
+    libraryId: number,
+    command: { title: string; body: string; description: string; tags: string[]; language: string }
+): Promise<{ path: string; created: boolean }> {
+    const libraries = db.getAllLibraries()
+    const library = libraries.find(l => l.id === libraryId)
+    if (!library) throw new Error(`Library not found: ${libraryId}`)
+    if (!library.manifest_path) throw new Error('Library is not initialized — run Init first')
+
+    const { owner, repo } = parseRepoUrl(library.github_repo)
+    const branch = await getRepoDefaultBranch(owner, repo)
+
+    // Derive file path under the manifest's parent directory
+    const manifestDir = library.manifest_path.includes('/')
+        ? library.manifest_path.substring(0, library.manifest_path.lastIndexOf('/') + 1)
+        : ''
+    const filename = `${slugify(command.title)}.json`
+    const filePath = `${manifestDir}${filename}`
+
+    // Build the command JSON content
+    const now = new Date().toISOString()
+    const commandJson = {
+        title: command.title,
+        body: command.body,
+        description: command.description || '',
+        tags: command.tags,
+        language: command.language || 'plaintext',
+        created_at: now,
+        updated_at: now,
+    }
+
+    // Check if file already exists (need SHA for update)
+    let existingSha: string | undefined
+    const checkRes = await githubFetch(`/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`)
+    if (checkRes.ok) {
+        const existing = await checkRes.json()
+        existingSha = existing.sha
+
+        // Preserve original created_at from existing file
+        try {
+            const existingContent = Buffer.from(existing.content, 'base64').toString('utf8')
+            const existingCommand = JSON.parse(existingContent)
+            if (existingCommand.created_at) {
+                commandJson.created_at = existingCommand.created_at
+            }
+        } catch { /* keep the new created_at */ }
+    } else if (checkRes.status !== 404) {
+        throw new Error(`Failed to check file path: ${checkRes.status}`)
+    }
+
+    const content = Buffer.from(JSON.stringify(commandJson, null, 2) + '\n').toString('base64')
+    const commitMessage = existingSha
+        ? `Update ${command.title}`
+        : `Add ${command.title}`
+
+    const putBody: Record<string, string> = {
+        message: commitMessage,
+        content,
+        branch,
+    }
+    if (existingSha) {
+        putBody.sha = existingSha
+    }
+
+    const putRes = await githubFetch(`/repos/${owner}/${repo}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(putBody),
+    })
+
+    if (!putRes.ok) {
+        const err = await putRes.json().catch(() => ({}))
+        throw new Error(`Failed to publish: ${(err as any).message || putRes.status}`)
+    }
+
+    return { path: filePath, created: !existingSha }
 }
 
 export function getAllLibraries(): Library[] {

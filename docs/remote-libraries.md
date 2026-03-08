@@ -83,16 +83,15 @@ The `client_id` is public and safe to embed — no secret is needed for Device F
 
 ### Repo Structure (SnipForge Library)
 
-Any GitHub repo can be a SnipForge library. It needs a `.snipforge.json` manifest. Command JSON files can live anywhere in the same directory or subdirectories — no specific folder structure required.
+Any GitHub repo can be a SnipForge library. It needs a `.snipforge.json` manifest. Command JSON files live in the same directory as the manifest — the manifest location defines the library root.
 
 **Dedicated library repo:**
 ```
 my-team-commands/
 ├── .snipforge.json              # Library manifest (required)
-├── get-pods.json                # Command files can be at any level
+├── get-pods.json                # Command files next to the manifest
 ├── restart-deployment.json
-└── networking/                  # Subdirectories are fine
-    └── check-node-status.json
+└── check-node-status.json
 ```
 
 **Subfolder in a monorepo:**
@@ -205,11 +204,11 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 | `library:getAll` | List all subscriptions |
 | `library:browse` | Preview library contents without subscribing |
 
-**Publishing (Phase 3 — not yet implemented):**
+**Publishing (Phase 3):**
 | Channel | Purpose |
 |---------|---------|
 | `library:init` | Initialize repo as SnipForge library |
-| `library:publish` | Push a local command to the repo |
+| `library:publish` | Push a command to the repo as a JSON file |
 | `library:unpublish` | Remove a command from the repo |
 
 #### Key Files
@@ -282,7 +281,7 @@ Auth + subscribe + pull + sync + unsubscribe. The core flow works end to end.
 
 **Deliverables:**
 - [x] Initialize a GitHub repo as a SnipForge library from the app
-- Push individual commands to a library repo
+- [x] Push individual commands to a library repo
 - Remove commands from a library repo
 - Bulk publish selected commands
 
@@ -304,6 +303,30 @@ Key changes:
 3. Library card updates to show sync controls
 4. Another user subscribes → sees the published command (after commands are added via #3)
 5. Re-init an already-initialized repo → warns/skips
+
+**Publish Command (issue [#3](https://github.com/ArtluxDM/SnipForge/issues/3)):**
+
+Flow: click Upload button on a command card → if multiple initialized libraries, pick target from a modal → app creates/updates JSON file in the repo via GitHub Contents API → brief success notification.
+
+Key details:
+- Filename derived from command title via slugify (e.g., "Get All Pods" → `get-all-pods.json`)
+- File placed under the manifest's parent directory (e.g., `snipforge_library/get-all-pods.json`)
+- If file already exists at that path, gets its SHA and updates (no duplicate files)
+- File content follows the standard SnipForge command JSON format (title, body, description, tags, language, timestamps)
+- Keyboard shortcut: `p` when a command is selected
+
+Key changes:
+- `github.ts`: new `publishCommand()` — slugifies title, checks for existing file (SHA for update), PUT via Contents API. New `slugify()` helper.
+- `index.ts`: `library:publish` IPC handler — fetches command from DB, parses tags, calls publishCommand
+- `preload/index.ts`: expose `library:publish` channel + Window type declaration
+- `vite-env.d.ts`: added full `auth`, `library`, `shell`, `window` type declarations (were missing, caused `(window.electronAPI as any)` casts)
+- `App.vue`: Upload button on command cards (visible when initialized libraries exist), inline publish modal for library picker when multiple initialized libs, `p` keyboard shortcut. Single-library shortcut: if only one initialized lib, publishes directly without modal.
+
+**Verification:**
+1. Click Upload on a command → publishes to the library → file appears in repo
+2. Publish same command again → updates the file (no duplicate)
+3. Subscribe from another account → sync pulls the published command
+4. Press `p` with a command selected → same publish flow
 
 #### Phase 4: Unified Library & Export Model
 

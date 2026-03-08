@@ -7,7 +7,7 @@ Use this folder as a starting point for creating your own shared command library
 1. Create a new GitHub repo (public or private)
 2. Copy the contents of this folder into it
 3. Edit `.snipforge.json` with your library name and description
-4. Add your command files to `commands/` (or anywhere in the repo)
+4. Add your command JSON files next to the manifest
 5. Push to GitHub
 
 ## File structure
@@ -15,10 +15,9 @@ Use this folder as a starting point for creating your own shared command library
 ```
 your-library/
 ├── .snipforge.json              # Required — library manifest
-└── commands/                    # Optional — organize however you like
-    ├── ssh-connect.json
-    ├── docker-list-containers.json
-    └── ...
+├── ssh-connect.json             # Command files live next to the manifest
+├── docker-list-containers.json
+└── ...
 ```
 
 ## Manifest (`.snipforge.json`)

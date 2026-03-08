@@ -7,6 +7,12 @@ import { promises as fs } from 'node:fs'
 import * as db from './database'
 import * as github from './github'
 
+// Enable remote debugging when REMOTE_DEBUG env var is set (e.g. REMOTE_DEBUG=9222)
+if (process.env.REMOTE_DEBUG) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.REMOTE_DEBUG)
+  app.commandLine.appendSwitch('remote-allow-origins', '*')
+}
+
 // Track app quitting state
 let isAppQuiting = false
 
@@ -623,6 +629,33 @@ ipcMain.handle('library:getRepoFolders', async (_, repoUrl: string) => {
   } catch (error) {
     console.error('Library getRepoFolders error:', error)
     return { success: false, error: (error as Error).message, folders: [] }
+  }
+})
+
+ipcMain.handle('library:publish', async (_, libraryId: number, commandId: number) => {
+  if (typeof libraryId !== 'number' || typeof commandId !== 'number') {
+    return { success: false, error: 'Invalid parameters' }
+  }
+  try {
+    // Fetch the command from DB
+    const commands = db.getAllCommands()
+    const command = commands.find(c => c.id === commandId)
+    if (!command) {
+      return { success: false, error: 'Command not found' }
+    }
+
+    const tags = JSON.parse(command.tags || '[]')
+    const { path, created } = await github.publishCommand(libraryId, {
+      title: command.title,
+      body: command.body,
+      description: command.description || '',
+      tags,
+      language: command.language || 'plaintext',
+    })
+    return { success: true, path, created }
+  } catch (error) {
+    console.error('Library publish error:', error)
+    return { success: false, error: (error as Error).message }
   }
 })
 

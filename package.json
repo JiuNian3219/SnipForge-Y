@@ -27,6 +27,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:debug": "REMOTE_DEBUG=9222 vite",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
     "preview": "vite preview"
   },
