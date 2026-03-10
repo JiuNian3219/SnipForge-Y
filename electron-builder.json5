@@ -4,7 +4,7 @@
   "appId": "com.snipforge.app",
   "asar": true,
   "productName": "SnipForge",
-  "icon": "app-icon.png",
+  "icon": "build/icon",
   "directories": {
     "output": "release/${version}"
   },
