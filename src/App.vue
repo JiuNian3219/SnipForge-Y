@@ -189,10 +189,12 @@ const loadCommands = async () => {
 } // Load commands when the component is mounted
 
 // Store click handler so we can remove it on unmount
+// Uses capture phase so it fires before any @click.stop can block propagation
 const outsideClickHandler = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  const filterContainer = target.closest('.search-container')
-  if (!filterContainer && showFilterDropdown.value) {
+  const filterDropdown = target.closest('.filter-dropdown')
+  const filterButton = target.closest('.filter-button')
+  if (!filterDropdown && !filterButton && showFilterDropdown.value) {
     showFilterDropdown.value = false
   }
 }
@@ -203,8 +205,8 @@ onMounted(() => {
   //keyboard event listener
   document.addEventListener('keydown', handleKeyboard)
 
-  // Add click listener to close filter dropdown when clicking outside
-  document.addEventListener('click', outsideClickHandler)
+  // mousedown + capture: fires on drag regions and before @click.stop
+  document.addEventListener('mousedown', outsideClickHandler, true)
 
   // Listen for window-shown event from main process
   if (window.electronAPI) {
@@ -228,7 +230,7 @@ onMounted(() => {
 // Cleanup event listeners and timers on unmount
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyboard)
-  document.removeEventListener('click', outsideClickHandler)
+  document.removeEventListener('mousedown', outsideClickHandler, true)
   if (notificationTimeout) clearTimeout(notificationTimeout)
 })
 // Two-stage filtering: tags first, then fuzzy search
@@ -1079,7 +1081,7 @@ const openDescriptionModal = (title: string, description: string) => {
 <template>
   <div class="app-container">
     <!-- Custom title bar with integrated search and controls -->
-    <div class="custom-titlebar">
+    <div :class="['custom-titlebar', { 'no-drag-override': showFilterDropdown }]">
       <!-- Left section: Traffic lights + App branding -->
       <div class="left-section">
         <div class="traffic-light-space"></div>
@@ -1408,6 +1410,10 @@ html, body, #app {
   padding: 0;
   border-bottom: 1px solid var(--bg-surface);
   -webkit-app-region: drag;
+}
+
+.custom-titlebar.no-drag-override {
+  -webkit-app-region: no-drag;
 }
 
 /* Left section */
