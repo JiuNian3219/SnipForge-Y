@@ -639,7 +639,7 @@ async function handleExportLibrary() {
 
   try {
     const result = await window.electronAPI.library.exportZip(
-      exportLibraryModal.value.commandIds,
+      [...exportLibraryModal.value.commandIds],
       exportLibraryModal.value.name.trim(),
       exportLibraryModal.value.description.trim(),
     )
