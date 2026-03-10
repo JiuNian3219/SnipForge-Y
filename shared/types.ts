@@ -32,6 +32,7 @@ export interface Library {
   manifest_path: string | null  // null = not initialized (no .snipforge.json)
   last_synced_at: string | null
   last_synced_sha: string | null
+  auto_sync: number             // 0 = off, 1 = on (SQLite integer boolean)
   created_at: string
 }
 

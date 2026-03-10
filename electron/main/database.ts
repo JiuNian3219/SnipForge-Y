@@ -112,6 +112,12 @@ try {
         console.log('Added type column to libraries')
     } catch { /* already exists */ }
 
+    // Per-library auto-sync toggle
+    try {
+        db.exec(`ALTER TABLE libraries ADD COLUMN auto_sync INTEGER NOT NULL DEFAULT 0`)
+        console.log('Added auto_sync column to libraries')
+    } catch { /* already exists */ }
+
     // Index for fast remote command lookups
     db.exec(`CREATE INDEX IF NOT EXISTS idx_commands_library_id ON commands(library_id);`)
     db.exec(`CREATE INDEX IF NOT EXISTS idx_commands_source ON commands(source);`)
@@ -261,6 +267,11 @@ export function clearLibraryManifest(libraryId: number): void {
     db.prepare(`
         UPDATE libraries SET manifest_path = NULL, last_synced_sha = NULL WHERE id = ?
     `).run(libraryId)
+}
+
+export function setLibraryAutoSync(libraryId: number, enabled: boolean): void {
+    if (!db) throw new Error("Database not initialized")
+    db.prepare("UPDATE libraries SET auto_sync = ? WHERE id = ?").run(enabled ? 1 : 0, libraryId)
 }
 
 export function deleteLibrary(libraryId: number): void {

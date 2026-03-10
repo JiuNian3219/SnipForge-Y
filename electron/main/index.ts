@@ -96,6 +96,81 @@ function registerHotkey(accelerator: string): boolean {
   }
 }
 
+// ── Background auto-sync timer ───────────────────────────────────
+// Uses chained setTimeout so interval changes take effect on next tick.
+let autoSyncTimeout: ReturnType<typeof setTimeout> | null = null
+
+function stopAutoSync(): void {
+  if (autoSyncTimeout) {
+    clearTimeout(autoSyncTimeout)
+    autoSyncTimeout = null
+    console.log('Auto-sync stopped')
+  }
+}
+
+const AUTO_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 hours
+
+function startAutoSync(): void {
+  stopAutoSync()
+
+  const masterEnabled = settings.get<boolean>('library.autoSync')
+  if (!masterEnabled) return
+
+  // Check if any library has auto_sync enabled
+  const libraries = db.getAllLibraries()
+  const hasAny = libraries.some(l => l.auto_sync)
+  if (!hasAny) return
+
+  function scheduleNext() {
+    autoSyncTimeout = setTimeout(async () => {
+      if (!settings.get<boolean>('library.autoSync')) {
+        autoSyncTimeout = null
+        return
+      }
+
+      console.log('Auto-sync: starting...')
+      try {
+        const allLibraries = db.getAllLibraries()
+        const toSync = allLibraries.filter(l => l.auto_sync)
+        const results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> = []
+
+        for (const library of toSync) {
+          try {
+            const result = library.type === 'local'
+              ? await localLibrary.syncLocalLibrary(library.id)
+              : await github.syncLibrary(library.id)
+            results.push({ libraryId: library.id, name: library.name, result })
+          } catch (e) {
+            results.push({
+              libraryId: library.id,
+              name: library.name,
+              result: { added: 0, updated: 0, removed: 0, errors: [(e as Error).message] }
+            })
+          }
+        }
+
+        const timestamp = new Date().toISOString()
+        console.log(`Auto-sync: completed ${toSync.length} libraries at ${timestamp}`)
+
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('library:autoSyncResult', { timestamp, results })
+        }
+      } catch (error) {
+        console.error('Auto-sync error:', error)
+      }
+
+      if (settings.get<boolean>('library.autoSync')) {
+        scheduleNext()
+      } else {
+        autoSyncTimeout = null
+      }
+    }, AUTO_SYNC_INTERVAL_MS)
+  }
+
+  console.log('Auto-sync started: every 6 hours')
+  scheduleNext()
+}
+
 
 // Window management functions
 async function showWindow() {
@@ -640,6 +715,20 @@ ipcMain.handle('library:unsubscribe', async (_, libraryId: number) => {
   }
 })
 
+ipcMain.handle('library:setAutoSync', async (_, libraryId: number, enabled: boolean) => {
+  if (typeof libraryId !== 'number' || typeof enabled !== 'boolean') {
+    return { success: false, error: 'Invalid parameters' }
+  }
+  try {
+    db.setLibraryAutoSync(libraryId, enabled)
+    startAutoSync() // Restart timer to pick up changes
+    return { success: true }
+  } catch (error) {
+    console.error('Library setAutoSync error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
 ipcMain.handle('library:sync', async (_, libraryId: number) => {
   if (typeof libraryId !== 'number') {
     return { success: false, error: 'Invalid library ID' }
@@ -920,6 +1009,12 @@ ipcMain.handle('settings:set', async (_, key: string, value: unknown) => {
     }
 
     settings.set(key, value)
+
+    // Restart auto-sync timer when master toggle changes
+    if (key === 'library.autoSync') {
+      startAutoSync()
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Error setting:', key, error)
@@ -970,6 +1065,7 @@ ipcMain.handle('window:getPlatform', () => {
 app.whenReady().then(() => {
   createWindow()
   createTray()
+  startAutoSync() // Start if library.autoSync is enabled
 })
 
 app.on('window-all-closed', () => {
@@ -979,13 +1075,14 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  stopAutoSync()
   globalShortcut.unregisterAll()
   db.closeDatabase()
   if (tray) {
     tray.destroy()
     tray = null
   }
-  console.log('Cleanup complete: shortcuts, database, tray')
+  console.log('Cleanup complete: auto-sync, shortcuts, database, tray')
 })
 
 app.on('before-quit', () => {

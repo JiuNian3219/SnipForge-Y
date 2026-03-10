@@ -79,6 +79,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:subscribe', repoUrl),
     unsubscribe: (libraryId: number): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('library:unsubscribe', libraryId),
+    setAutoSync: (libraryId: number, enabled: boolean): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('library:setAutoSync', libraryId, enabled),
     sync: (libraryId: number): Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }> =>
       ipcRenderer.invoke('library:sync', libraryId),
     syncAll: (): Promise<{ success: boolean; results?: Array<{ library: Library; result: SyncResult }>; error?: string }> =>
@@ -105,6 +107,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     exportZip: (commandIds: number[], name: string, description: string): Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }> =>
       ipcRenderer.invoke('library:exportZip', commandIds, name, description),
+    onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => {
+      ipcRenderer.on('library:autoSyncResult', (_, data) => callback(data))
+      return () => { ipcRenderer.removeAllListeners('library:autoSyncResult') }
+    },
   }
 })
 // tell the compiler what's availible on the window object
@@ -157,6 +163,7 @@ declare global {
       library: {
         subscribe: (repoUrl: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
         unsubscribe: (libraryId: number) => Promise<{ success: boolean; error?: string }>
+        setAutoSync: (libraryId: number, enabled: boolean) => Promise<{ success: boolean; error?: string }>
         sync: (libraryId: number) => Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }>
         syncAll: () => Promise<{ success: boolean; results?: Array<{ library: Library; result: SyncResult }>; error?: string }>
         getAll: () => Promise<Library[]>
@@ -169,6 +176,7 @@ declare global {
         bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
         onBulkPublishProgress: (callback: (data: { result: BulkPublishResult; index: number; total: number }) => void) => () => void
         exportZip: (commandIds: number[], name: string, description: string) => Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }>
+        onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => () => void
       }
     }
   }

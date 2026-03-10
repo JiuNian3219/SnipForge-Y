@@ -15,6 +15,7 @@ export interface WindowState {
 const DEFAULTS: Record<string, unknown> = {
   'general.hotkey': 'CommandOrControl+Shift+Space',
   'general.windowState': null as WindowState | null,
+  'library.autoSync': false, // master toggle for auto-sync
 }
 
 // ── CRUD ─────────────────────────────────────────────────────────

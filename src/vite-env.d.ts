@@ -56,6 +56,7 @@ interface Window {
     library: {
       subscribe: (repoUrl: string) => Promise<{ success: boolean; library?: any; syncResult?: any; error?: string }>
       unsubscribe: (libraryId: number) => Promise<{ success: boolean; error?: string }>
+      setAutoSync: (libraryId: number, enabled: boolean) => Promise<{ success: boolean; error?: string }>
       sync: (libraryId: number) => Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }>
       syncAll: () => Promise<{ success: boolean; results?: any[]; error?: string }>
       getAll: () => Promise<any[]>
@@ -68,6 +69,7 @@ interface Window {
       bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: import('../shared/types').BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
       onBulkPublishProgress: (callback: (data: { result: import('../shared/types').BulkPublishResult; index: number; total: number }) => void) => () => void
       exportZip: (commandIds: number[], name: string, description: string) => Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }>
+      onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => () => void
     }
   }
 }

@@ -104,11 +104,12 @@ The foundation. Adding new settings is now just a key in `DEFAULTS` + one UI ele
 - `src/components/SettingsModal.vue` — new General + Connectors tabs, restructured layout, OAuth moved
 - `src/vite-env.d.ts` — settings type declarations
 
-### Phase 2: Library & Sync Settings
+### Phase 2: Library & Sync Settings ✅ COMPLETE
 
-- [ ] Auto-sync toggle + interval picker in Libraries tab
-- [ ] Background sync timer in main process (chained `setTimeout`, respects interval changes)
-- [ ] Sync status line in Libraries tab — "Last synced: 5 min ago"
+- [x] Auto-sync toggle + interval dropdown (15/30/60/120 min) in Libraries tab
+- [x] Background sync timer in main process (chained `setTimeout`, re-reads interval each cycle, starts/stops on setting change)
+- [x] Sync status line — relative time ("2 min ago"), derived from most recent `last_synced_at` across libraries, refreshes every 30s
+- [x] `library:autoSyncResult` event pushes results to renderer, triggers library list refresh
 
 ### Phase 3: Display & Shortcuts
 
@@ -128,7 +129,8 @@ Unblocks parked ideas (tag pills, preview on copy). All in the General tab.
 | Key format | Dot-notation (`general.hotkey`) | Groups settings by section, readable, greppable |
 | Defaults | In code, not DB | DB only stores overrides. Defaults change with app updates without migration. |
 | Connectors | Own tab | Auth integrations are a distinct concern. Extensible pattern for future providers. |
-| Auto-sync | Libraries tab | It's a library setting — toggle and interval live next to the libraries they affect. |
+| Auto-sync | Per-library + master toggle | Master toggle in Libraries header, per-library toggle next to library name. Fixed 6-hour interval internally. |
+| Auto-sync UX | Separate toggle for now | **Future idea:** collapse sync button and auto-sync into one control — single click = manual sync, double click = toggle auto-sync. Eliminates the per-library toggle. |
 | Hotkey capture | Custom input that listens for keydown | Standard UX for hotkey pickers. Show current combo, click to change, press new combo. |
 | Window state | Save on `close` event, restore on `ready` | Standard Electron pattern. Store as JSON in settings. |
 | Shortcuts | General tab, not own tab | Not enough content to justify a dedicated tab. Section within General is sufficient. |

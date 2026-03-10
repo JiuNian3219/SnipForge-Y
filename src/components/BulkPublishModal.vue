@@ -255,11 +255,28 @@ function handleClose() {
 .bp-library-picker select {
   width: 100%;
   padding: 8px 10px;
+  padding-right: 28px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 13px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.bp-library-picker select:focus {
+  border-color: var(--accent);
+}
+
+.bp-library-picker select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .bp-library-single {

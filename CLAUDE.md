@@ -20,7 +20,7 @@ SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching
 
 **User-first mindset.** We're not building code for code's sake. Every feature exists because a person needs it. Think about how functional it is for the end user — that's the driver, not how fancy the implementation is.
 
-**Context-aware workflow split.** The main agent handles backend (Electron main process, SQLite, IPC, GitHub API), architecture, ideation, releases, and doc updates. The **frontend-dev agent** handles all renderer/UI work autonomously — it receives a spec (what to build, which IPC channels to use, expected behavior) and executes the full loop: implement → screenshot → iterate → report back. This split exists to manage context — heavy backend work fills the window, and frontend work (Vue components, CSS, visual verification) needs its own clean context to avoid hallucinations. See `.claude/README.md` for all available agents.
+**Context management.** For large features, split into two issues: backend (#N-backend) and frontend (#N-frontend). Backend session handles main process, SQLite, IPC, types. Frontend session starts fresh with clean context and handles Vue components, styles, visual verification. This avoids hallucinations from context pressure. Chrome DevTools MCP is available directly for screenshots and visual verification (`pnpm dev:debug`). See `.claude/README.md` for available agents.
 
 **This file is part of the workflow.** When how we work changes, CLAUDE.md gets updated in the same commit. Don't append endlessly — edit to keep it current.
 
@@ -42,6 +42,26 @@ SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching
 - **Process boundary:** Long operations in Main, keep Renderer responsive
 - **IPC:** Small, typed channels — not overloaded RPC events
 
+## Frontend Reference
+
+**Key files:**
+- `src/App.vue` — main palette (search, command list, all root styles)
+- `src/components/SettingsModal.vue` — settings page (General, Connectors, Libraries, Manage Commands)
+- `src/components/CommandModal.vue` — add/edit command
+- `src/components/VariableInputModal.vue` — variable substitution prompt
+- `src/composables/useSettings.ts` — reactive settings store
+- `src/preload.ts` — IPC bridge (check for available channels)
+- `shared/types.ts` — shared TypeScript types
+
+**Design system (CSS variables in App.vue):**
+- Accent: `--accent` (#ec5002), `--accent-hover`, `--accent-light`
+- Backgrounds: `--bg-app`, `--bg-input`, `--bg-surface`, `--bg-elevated`, `--bg-hover`
+- Text: `--text-primary`, `--text-secondary`, `--text-tertiary`, `--text-muted`
+- Borders: `--border`, `--border-hover`
+- Z-indices: `--z-dropdown` (500), `--z-modal` (1000), `--z-toast` (2000)
+
+**Design skills available:** `frontend-design` (plugin, creative direction), `ui-ux-pro-max` (skill, UX knowledge database). Invoke when making visual design decisions.
+
 ## Feature Docs
 
 Feature documentation lives in `docs/`. These are living documents — plan, implementation notes, and dev log in one place.
@@ -50,7 +70,7 @@ Feature documentation lives in `docs/`. These are living documents — plan, imp
 |-----|------|--------|
 | `docs/schema.md` | Database schema — tables, columns, migrations, TypeScript types | Living reference |
 | `docs/remote-libraries.md` | Remote Libraries — GitHub sync, publishing, unified library model | Phases 1-4 complete, Phase 5 planned |
-| `docs/settings.md` | Settings — infrastructure, General tab, connectors, auto-sync, shortcuts | Phase 1 planned |
+| `docs/settings.md` | Settings — infrastructure, General tab, connectors, auto-sync, shortcuts | Phases 1-2 complete, Phase 3 planned |
 | `docs/variable-substitution.md` | Variable substitution — `{{variable}}` templates, copy flow, highlighting | Current state documented, #11 planned |
 
 ## Development
