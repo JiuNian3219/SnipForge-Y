@@ -26,8 +26,8 @@ Values are JSON-encoded for complex types (e.g., `{"width":800,"height":600}`). 
 const DEFAULTS: Record<string, unknown> = {
   'general.hotkey': 'CommandOrControl+Shift+Space',
   'general.windowState': null,
-  'library.autoSync': false,
-  'library.autoSyncInterval': 30,  // minutes
+  'general.autoSync': false,
+  'general.autoSyncInterval': 30,  // minutes
 }
 
 function get<T>(key: string): T
@@ -89,13 +89,13 @@ The SettingsModal tabs become:
 - `src/components/SettingsModal.vue` — new General tab, restructured tabs, OAuth moved
 - `src/vite-env.d.ts` — settings type declarations
 
-### Phase 2: Library & Sync Settings
+### Phase 2: Background & Sync Settings
 
-Auto-sync lives in the Libraries tab since it's contextual to library behavior.
+Auto-sync is a preference (set once, forget), not an action — it belongs in General alongside other background behaviors.
 
-- [ ] Auto-sync toggle + interval picker (in Libraries tab, above the library list)
+- [ ] "Background" section in General tab: auto-sync toggle + interval picker
 - [ ] Background sync timer in main process (chained `setTimeout`, respects interval changes)
-- [ ] Sync status indicator (last sync time, next sync countdown)
+- [ ] Sync status line in Libraries tab — "Last synced: 5 min ago" (visibility without the control)
 
 ### Phase 3: Display & Shortcuts
 
@@ -115,7 +115,7 @@ Unblocks the parked ideas (tag pills, preview on copy). Keyboard remapping is th
 | Key format | Dot-notation (`general.hotkey`) | Groups settings by section, readable, greppable |
 | Defaults | In code, not DB | DB only stores overrides. Defaults change with app updates without migration. |
 | Connectors | Section in General, not own tab | One connector today (GitHub). Own tab is premature. Revisit when there are 3+. |
-| Auto-sync location | Libraries tab | It's library behavior, not a general preference. Keep it contextual. |
+| Auto-sync location | General tab, "Background" section | It's a preference (set once, forget), not an action. Libraries tab keeps a status line for visibility. |
 | Hotkey capture | Custom input that listens for keydown | Standard UX for hotkey pickers. Show current combo, click to change, press new combo. |
 | Window state | Save on `close` event, restore on `ready` | Standard Electron pattern. Store as JSON in settings. |
 
