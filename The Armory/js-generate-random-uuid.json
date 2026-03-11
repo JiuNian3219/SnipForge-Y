@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Generate random UUID",
+  "body": "const uuid = crypto.randomUUID();\nconsole.log('UUID:', uuid);\nreturn uuid;",
+  "description": "Generate random UUID v4 - useful for creating unique identifiers (developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

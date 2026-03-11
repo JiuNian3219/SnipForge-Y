@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "SSH: Local port forwarding",
+  "body": "ssh -L {{local port}}:localhost:{{remote port}} {{username}}@{{server}}",
+  "description": "Forward local port to remote server port (tunnel)",
+  "tags": [
+    "ssh"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

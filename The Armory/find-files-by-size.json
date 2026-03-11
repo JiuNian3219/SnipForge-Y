@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Find files by size",
+  "body": "find {{directory}} -size +{{size}}M",
+  "description": "Find files larger than specified size (M=megabytes, G=gigabytes)",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

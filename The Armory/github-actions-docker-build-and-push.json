@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "GitHub Actions: Docker build and push",
+  "body": "name: Docker Build\n\non:\n  push:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    \n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Build Docker image\n      run: docker build -t {{image name}}:{{tag}} .\n      \n    - name: Push to registry\n      run: |\n        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin\n        docker push {{image name}}:{{tag}}",
+  "description": "Build and push Docker images in GitHub Actions",
+  "tags": [
+    "github-actions",
+    "ci-cd",
+    "docker"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

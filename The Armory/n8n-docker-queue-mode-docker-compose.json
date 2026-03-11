@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Queue mode docker-compose",
+  "body": "version: '3.8'\nservices:\n  n8n-main:\n    image: n8nio/n8n:latest\n    container_name: n8n-main\n    restart: unless-stopped\n    ports:\n      - \"5678:5678\"\n    environment:\n      - EXECUTIONS_MODE=queue\n      - QUEUE_BULL_REDIS_HOST=redis\n      - DB_TYPE=postgresdb\n      - DB_POSTGRESDB_HOST=postgres\n      - N8N_ENCRYPTION_KEY={{encryption-key}}\n    depends_on:\n      - postgres\n      - redis\n  \n  n8n-worker:\n    image: n8nio/n8n:latest\n    restart: unless-stopped\n    command: worker\n    environment:\n      - EXECUTIONS_MODE=queue\n      - QUEUE_BULL_REDIS_HOST=redis\n      - DB_TYPE=postgresdb\n      - DB_POSTGRESDB_HOST=postgres\n      - N8N_ENCRYPTION_KEY={{encryption-key}}\n    depends_on:\n      - postgres\n      - redis\n  \n  redis:\n    image: redis:7-alpine\n    restart: unless-stopped\n  \n  postgres:\n    image: postgres:16\n    restart: unless-stopped\n    environment:\n      - POSTGRES_DB=n8n\n      - POSTGRES_USER=n8n\n      - POSTGRES_PASSWORD={{password}}\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\nvolumes:\n  postgres_data:",
+  "description": "n8n queue mode with workers for horizontal scaling - production setup (docs.n8n.io/hosting/scaling/queue-mode/)",
+  "tags": [
+    "n8n",
+    "docker",
+    "docker-compose"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-24T01:45:00.000Z",
+  "updated_at": "2025-12-24T01:45:00.000Z"
+}

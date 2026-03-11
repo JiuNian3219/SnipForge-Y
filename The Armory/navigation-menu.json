@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Navigation Menu",
+  "body": "<nav>\n    <ul>\n        <li><a href=\"#home\">Home</a></li>\n        <li><a href=\"#about\">About</a></li>\n        <li><a href=\"#services\">Services</a></li>\n        <li><a href=\"#contact\">Contact</a></li>\n    </ul>\n</nav>",
+  "description": "Simple navigation menu structure",
+  "tags": [
+    "html"
+  ],
+  "language": "html",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

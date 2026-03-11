@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "SSH: Connect with specific key",
+  "body": "ssh -i {{key path}} {{username}}@{{server}}",
+  "description": "Connect using a specific private key file",
+  "tags": [
+    "ssh"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

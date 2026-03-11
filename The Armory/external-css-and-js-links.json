@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "External CSS and JS Links",
+  "body": "<!-- CSS -->\n<link rel=\"stylesheet\" href=\"{{stylesheet url}}\">\n\n<!-- JavaScript -->\n<script src=\"{{script url}}\"></script>\n<script src=\"{{script url}}\" defer></script>",
+  "description": "Link external CSS and JavaScript files (defer loads after HTML parsing)",
+  "tags": [
+    "html",
+    "css",
+    "javascript"
+  ],
+  "language": "html",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

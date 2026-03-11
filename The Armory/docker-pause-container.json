@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Pause container",
+  "body": "docker pause {{container name}}",
+  "description": "Suspend processes in a running container without stopping it",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

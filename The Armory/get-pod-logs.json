@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Get pod logs",
+  "body": "kubectl logs {{pod name}} -n {{namespace}}",
+  "description": "View logs from pod",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

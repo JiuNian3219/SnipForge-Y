@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "n8n Debug: Check file permissions in container",
+  "body": "docker exec {{container-name}} ls -la /home/node/.n8n",
+  "description": "Verify n8n data directory permissions - debug permission errors (docs.n8n.io/hosting/installation/docker/)",
+  "tags": [
+    "n8n",
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

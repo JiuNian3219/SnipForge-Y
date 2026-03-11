@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n API: Export all workflows via API",
+  "body": "curl -s -X GET \"{{n8n-url}}/api/v1/workflows\" \\\n  -H \"X-N8N-API-KEY: {{api-key}}\" | jq '.data' > workflows-export-$(date +%Y%m%d).json",
+  "description": "Export all workflows to file using API - alternative to CLI export (docs.n8n.io/api/api-reference/)",
+  "tags": [
+    "n8n",
+    "api",
+    "backup"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:40:00.000Z",
+  "updated_at": "2025-12-24T01:40:00.000Z"
+}

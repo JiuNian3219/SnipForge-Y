@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Get deployments",
+  "body": "kubectl get deployments -n {{namespace}}",
+  "description": "List all deployments in namespace",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Chunk array into smaller arrays",
+  "body": "const array = {{array}};\nconst size = {{chunk-size}};\nconst chunks = [];\nfor (let i = 0; i < array.length; i += size) {\n  chunks.push(array.slice(i, i + size));\n}\nconsole.log('Chunks:', chunks);\nreturn chunks;",
+  "description": "Split array into smaller chunks of specified size - batch processing (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

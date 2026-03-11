@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "n8n: Activate all workflows",
+  "body": "n8n update:workflow --all --active=true",
+  "description": "Activate all workflows (requires n8n restart)",
+  "tags": [
+    "n8n"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

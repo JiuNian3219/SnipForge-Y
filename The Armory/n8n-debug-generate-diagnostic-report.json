@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "n8n Debug: Generate diagnostic report",
+  "body": "echo \"=== n8n Diagnostic Report ===\"\necho \"Version: $(docker exec {{container-name}} n8n --version)\"\necho \"Environment:\"\ndocker exec {{container-name}} env | grep N8N\necho \"Health:\"\ncurl -s {{n8n-url}}/healthz\necho \"Container Stats:\"\ndocker stats {{container-name}} --no-stream",
+  "description": "Generate comprehensive diagnostic report - collect key troubleshooting info (mathias.rocks/blog/2025-01-19-5-common-n8n-errors)",
+  "tags": [
+    "n8n",
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

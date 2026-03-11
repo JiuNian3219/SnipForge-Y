@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Debug: Test webhook from inside container",
+  "body": "docker exec {{container-name}} curl -X POST http://localhost:5678/webhook/{{webhook-path}} -H \"Content-Type: application/json\" -d '{\"test\":true}'",
+  "description": "Test webhook from inside container - isolate internal vs external connectivity issues (community.n8n.io/t/webhook-production-url-only-working-in-test/80228)",
+  "tags": [
+    "n8n",
+    "docker",
+    "webhook"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

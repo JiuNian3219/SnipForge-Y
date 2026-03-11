@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Format date to ISO string",
+  "body": "const date = new Date('{{date}}');\nconst isoString = date.toISOString();\nconsole.log('ISO Date:', isoString);\nreturn isoString;",
+  "description": "Convert date to ISO 8601 format - standard date format for APIs (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Nginx: Rate limiting",
+  "body": "limit_req_zone $binary_remote_addr zone={{zone name}}:10m rate={{requests}}r/s;\n\nserver {\n    location /api/ {\n        limit_req zone={{zone name}} burst={{burst size}};\n        proxy_pass http://backend;\n    }\n}",
+  "description": "Limit request rate to prevent abuse",
+  "tags": [
+    "nginx"
+  ],
+  "language": "nginx",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

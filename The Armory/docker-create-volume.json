@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Create volume",
+  "body": "docker volume create {{volume name}}",
+  "description": "Create a named volume for persistent data storage",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

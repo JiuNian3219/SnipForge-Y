@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "GitLab CI: Artifacts",
+  "body": "job:\n  script:\n    - {{build command}}\n  artifacts:\n    paths:\n      - {{output directory}}/\n    expire_in: 1 week",
+  "description": "Save build artifacts for download or later stages",
+  "tags": [
+    "gitlab-ci",
+    "ci-cd"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

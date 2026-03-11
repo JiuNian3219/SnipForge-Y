@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Kubectl: Get Job status",
+  "body": "kubectl get job {{job name}} -n {{namespace}} -o wide",
+  "description": "Show Job status including completions and duration",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

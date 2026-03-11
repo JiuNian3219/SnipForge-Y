@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Nice: Run with lower priority",
+  "body": "nice -n {{priority}} {{command}}",
+  "description": "Run command with adjusted priority (19=lowest, -20=highest)",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

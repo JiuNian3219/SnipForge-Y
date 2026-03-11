@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Retry function with exponential backoff",
+  "body": "async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {\n  for (let i = 0; i < maxRetries; i++) {\n    try {\n      return await fn();\n    } catch (error) {\n      if (i === maxRetries - 1) throw error;\n      const delay = baseDelay * Math.pow(2, i);\n      console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);\n      await new Promise(resolve => setTimeout(resolve, delay));\n    }\n  }\n}\n\n// Usage: await retryWithBackoff(() => fetchData())",
+  "description": "Retry async function with exponential backoff - handle transient failures (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

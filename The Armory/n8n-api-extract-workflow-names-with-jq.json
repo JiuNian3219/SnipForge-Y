@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n API: Extract workflow names with jq",
+  "body": "curl -X GET \"{{n8n-url}}/api/v1/workflows\" \\\n  -H \"X-N8N-API-KEY: {{api-key}}\" \\\n  -H \"Accept: application/json\" | jq '.data[] | {id: .id, name: .name, active: .active}'",
+  "description": "Extract specific workflow fields using jq - create custom reports (docs.n8n.io/api/api-reference/)",
+  "tags": [
+    "n8n",
+    "api",
+    "jq"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:40:00.000Z",
+  "updated_at": "2025-12-24T01:40:00.000Z"
+}

@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Backup n8n data volume",
+  "body": "docker run --rm -v n8n_data:/data -v $(pwd):/backup alpine tar czf /backup/n8n-data-backup-$(date +%Y%m%d).tar.gz -C /data .",
+  "description": "Create compressed backup of n8n data volume - includes workflows, credentials, logs (docs.n8n.io/hosting/installation/docker/)",
+  "tags": [
+    "n8n",
+    "docker",
+    "backup"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:45:00.000Z",
+  "updated_at": "2025-12-24T01:45:00.000Z"
+}

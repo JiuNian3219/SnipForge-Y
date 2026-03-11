@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "List background jobs",
+  "body": "jobs",
+  "description": "Show all background jobs in current shell",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

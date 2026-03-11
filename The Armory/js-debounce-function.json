@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Debounce function",
+  "body": "function debounce(func, wait) {\n  let timeout;\n  return function executedFunction(...args) {\n    const later = () => {\n      clearTimeout(timeout);\n      func(...args);\n    };\n    clearTimeout(timeout);\n    timeout = setTimeout(later, wait);\n  };\n}\n\n// Usage: const debouncedFn = debounce(() => console.log('Called'), 1000);",
+  "description": "Create debounced function - limit function execution rate (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

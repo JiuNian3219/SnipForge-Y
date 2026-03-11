@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "HTML Form Template",
+  "body": "<form action=\"{{action url}}\" method=\"POST\">\n    <label for=\"name\">Name:</label>\n    <input type=\"text\" id=\"name\" name=\"name\" required>\n    \n    <label for=\"email\">Email:</label>\n    <input type=\"email\" id=\"email\" name=\"email\" required>\n    \n    <label for=\"message\">Message:</label>\n    <textarea id=\"message\" name=\"message\" rows=\"4\" required></textarea>\n    \n    <button type=\"submit\">Submit</button>\n</form>",
+  "description": "Basic contact form structure with validation",
+  "tags": [
+    "html"
+  ],
+  "language": "html",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

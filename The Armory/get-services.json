@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Get services",
+  "body": "kubectl get svc -n {{namespace}}",
+  "description": "List all services in namespace",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

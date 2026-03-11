@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Create new branch",
+  "body": "git checkout -b {{branch name}}",
+  "description": "Create and switch to a new branch",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

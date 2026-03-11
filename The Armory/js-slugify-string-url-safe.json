@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Slugify string (URL-safe)",
+  "body": "const text = '{{text}}';\nconst slug = text\n  .toLowerCase()\n  .trim()\n  .replace(/[^\\w\\s-]/g, '')\n  .replace(/[\\s_-]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nconsole.log('Slug:', slug);\nreturn slug;",
+  "description": "Convert string to URL-safe slug - create clean URLs (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Nginx: Basic server block",
+  "body": "server {\n    listen 80;\n    server_name {{domain}};\n    \n    root /var/www/{{domain}};\n    index index.html;\n    \n    location / {\n        try_files $uri $uri/ =404;\n    }\n}",
+  "description": "Basic nginx server block for static site",
+  "tags": [
+    "nginx"
+  ],
+  "language": "nginx",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

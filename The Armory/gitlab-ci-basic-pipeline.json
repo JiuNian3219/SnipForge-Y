@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "GitLab CI: Basic pipeline",
+  "body": "stages:\n  - build\n  - test\n  - deploy\n\nbuild:\n  stage: build\n  script:\n    - {{build command}}\n\ntest:\n  stage: test\n  script:\n    - {{test command}}\n\ndeploy:\n  stage: deploy\n  script:\n    - {{deploy command}}\n  only:\n    - main",
+  "description": "Basic GitLab CI/CD pipeline configuration",
+  "tags": [
+    "gitlab-ci",
+    "ci-cd",
+    "yaml"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

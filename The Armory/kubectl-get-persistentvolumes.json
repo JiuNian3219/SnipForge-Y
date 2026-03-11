@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Kubectl: Get PersistentVolumes",
+  "body": "kubectl get pv",
+  "description": "List all PersistentVolumes in cluster",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

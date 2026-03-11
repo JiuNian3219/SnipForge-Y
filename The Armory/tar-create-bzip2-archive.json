@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Tar: Create bzip2 archive",
+  "body": "tar -cjvf {{archive.tar.bz2}} {{directory}}",
+  "description": "Create bzip2 compressed archive (better compression, slower)",
+  "tags": [
+    "tar"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

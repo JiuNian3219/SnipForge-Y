@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Force push with lease",
+  "body": "git push --force-with-lease origin {{branch name}}",
+  "description": "Safer force push - only pushes if remote hasn't changed since last fetch",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

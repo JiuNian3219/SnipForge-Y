@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Curl: DELETE request",
+  "body": "curl -X DELETE {{url}} \\\n  -H \"Authorization: Bearer {{token}}\"",
+  "description": "DELETE request to remove resource",
+  "tags": [
+    "curl",
+    "api"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

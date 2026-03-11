@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Extract specific properties from object",
+  "body": "const obj = {{object}};\nconst properties = {{properties-array}};\nconst extracted = {};\nproperties.forEach(prop => {\n  if (prop in obj) extracted[prop] = obj[prop];\n});\nconsole.log('Extracted:', extracted);\nreturn extracted;",
+  "description": "Extract only specified properties from object - clean data (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/in)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

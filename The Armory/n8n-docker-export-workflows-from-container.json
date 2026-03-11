@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Export workflows from container",
+  "body": "docker exec -u node -it {{container-name}} n8n export:workflow --all --output=/tmp/workflows.json",
+  "description": "Export all workflows from n8n Docker container to file inside container - run as 'node' user to avoid permission issues (docs.n8n.io/hosting/installation/docker/)",
+  "tags": [
+    "n8n",
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

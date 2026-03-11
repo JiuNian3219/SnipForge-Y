@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n OAuth2: Verify OAuth2 endpoint accessibility",
+  "body": "curl -I \"{{n8n-url}}/rest/oauth2-credential/callback\"",
+  "description": "Check if OAuth2 callback endpoint is accessible - returns headers only (github.com/n8n-io/n8n/issues/10973)",
+  "tags": [
+    "n8n",
+    "oauth2",
+    "curl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

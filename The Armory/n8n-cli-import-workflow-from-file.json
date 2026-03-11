@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "n8n CLI: Import workflow from file",
+  "body": "n8n import:workflow --input={{workflow.json}}",
+  "description": "Import workflow(s) from JSON file - WARNING: overwrites workflows with same IDs (docs.n8n.io/workflows/export-import/)",
+  "tags": [
+    "n8n"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

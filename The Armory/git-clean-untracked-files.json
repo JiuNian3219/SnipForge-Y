@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Clean untracked files",
+  "body": "git clean -fd",
+  "description": "Remove untracked files and directories from working directory - useful for cleanup",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

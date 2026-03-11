@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Redis: Connect to server",
+  "body": "redis-cli -h {{host}} -p {{port}}",
+  "description": "Connect to Redis server",
+  "tags": [
+    "redis",
+    "database"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

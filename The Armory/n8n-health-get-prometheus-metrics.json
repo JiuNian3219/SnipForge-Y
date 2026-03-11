@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Health: Get Prometheus metrics",
+  "body": "curl {{n8n-url}}/metrics",
+  "description": "Retrieve Prometheus-format metrics from n8n - includes workflow execution stats, API calls, etc (docs.n8n.io/hosting/logging-monitoring/monitoring/)",
+  "tags": [
+    "n8n",
+    "prometheus",
+    "monitoring"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

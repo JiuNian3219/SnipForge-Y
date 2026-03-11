@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Inspect network",
+  "body": "docker network inspect {{network name}}",
+  "description": "Show detailed information about a network including connected containers",
+  "tags": [
+    "docker",
+    "network"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

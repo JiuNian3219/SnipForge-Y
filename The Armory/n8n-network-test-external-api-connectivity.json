@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Network: Test external API connectivity",
+  "body": "docker exec {{container-name}} curl -v https://{{external-api.com}}/endpoint",
+  "description": "Test if n8n container can reach external APIs - debug network/firewall issues (community.n8n.io/t/connection-refused-errors)",
+  "tags": [
+    "n8n",
+    "docker",
+    "network"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

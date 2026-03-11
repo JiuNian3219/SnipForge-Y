@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Curl: PUT request",
+  "body": "curl -X PUT {{url}} \\\n  -H \"Content-Type: application/json\" \\\n  -d '{{json data}}'",
+  "description": "PUT request to update resource",
+  "tags": [
+    "curl",
+    "api"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

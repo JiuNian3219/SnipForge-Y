@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker Compose: Rebuild service",
+  "body": "docker-compose up -d --no-deps --build {{service name}}",
+  "description": "Rebuild and restart a specific service without affecting dependencies",
+  "tags": [
+    "docker-compose"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

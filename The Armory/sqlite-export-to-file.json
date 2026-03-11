@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "SQLite: Export to file",
+  "body": "sqlite3 {{database.db}} .dump > {{backup.sql}}",
+  "description": "Export SQLite database to SQL file",
+  "tags": [
+    "sqlite",
+    "database",
+    "backup"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

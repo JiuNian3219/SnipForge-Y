@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Check n8n version in container",
+  "body": "docker exec -u node {{container-name}} n8n --version",
+  "description": "Display n8n version running in Docker container - useful for troubleshooting version-specific issues (docs.n8n.io/hosting/installation/docker/)",
+  "tags": [
+    "n8n",
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

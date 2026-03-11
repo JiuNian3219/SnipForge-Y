@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "SQLite: Show schema",
+  "body": ".schema {{table name}}",
+  "description": "Display table structure (run inside sqlite3)",
+  "tags": [
+    "sqlite",
+    "database"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

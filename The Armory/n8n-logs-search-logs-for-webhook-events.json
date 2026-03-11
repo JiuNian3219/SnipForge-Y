@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Logs: Search logs for webhook events",
+  "body": "docker logs {{container-name}} 2>&1 | grep -i webhook",
+  "description": "Search n8n logs for webhook-related events - troubleshoot webhook issues (docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/common-issues/)",
+  "tags": [
+    "n8n",
+    "docker",
+    "webhook"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

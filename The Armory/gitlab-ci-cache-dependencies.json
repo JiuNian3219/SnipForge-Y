@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "GitLab CI: Cache dependencies",
+  "body": "cache:\n  paths:\n    - node_modules/\n    - .npm/\n\njob:\n  script:\n    - npm install",
+  "description": "Cache dependencies between pipeline runs",
+  "tags": [
+    "gitlab-ci",
+    "ci-cd"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

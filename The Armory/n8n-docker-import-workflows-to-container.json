@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Import workflows to container",
+  "body": "docker cp {{workflows.json}} {{container-name}}:/tmp/workflows.json && docker exec -u node -it {{container-name}} n8n import:workflow --input=/tmp/workflows.json",
+  "description": "Copy workflow file to container and import - two-step process for Docker environments (community.n8n.io/t/importing-workflows-and-credentials/45142)",
+  "tags": [
+    "n8n",
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

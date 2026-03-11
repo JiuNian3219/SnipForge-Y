@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "n8n CLI: Uninstall community node",
+  "body": "n8n remove:community-node {{package-name}}",
+  "description": "Remove/uninstall a community node package - useful if node causes instability or crashes (docs.n8n.io/hosting/cli-commands/)",
+  "tags": [
+    "n8n"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "GitLab CI: Docker build job",
+  "body": "docker-build:\n  image: docker:latest\n  services:\n    - docker:dind\n  stage: build\n  script:\n    - docker build -t {{image name}} .\n    - docker push {{image name}}",
+  "description": "Build Docker images in GitLab CI",
+  "tags": [
+    "gitlab-ci",
+    "ci-cd",
+    "docker"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

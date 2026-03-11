@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Interactive rebase",
+  "body": "git rebase -i HEAD~{{number of commits}}",
+  "description": "Interactively rebase last N commits - allows squashing, reordering, or editing commits",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Group array by property",
+  "body": "const items = {{array}};\nconst property = '{{property}}';\nconst grouped = items.reduce((acc, item) => {\n  const key = item[property];\n  if (!acc[key]) acc[key] = [];\n  acc[key].push(item);\n  return acc;\n}, {});\nconsole.log('Grouped:', grouped);\nreturn grouped;",
+  "description": "Group array of objects by property - organize data (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

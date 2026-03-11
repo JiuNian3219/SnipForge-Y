@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Validate email format (regex)",
+  "body": "const email = '{{email}}';\nconst emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$/;\nconst isValid = emailRegex.test(email);\nconsole.log(`Email is ${isValid ? 'valid' : 'invalid'}`);\nreturn isValid;",
+  "description": "Validate email format using regex pattern - basic email validation (mailtrap.io/blog/javascript-email-validation/)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

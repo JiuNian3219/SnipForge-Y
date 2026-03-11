@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: View reference logs",
+  "body": "git reflog",
+  "description": "Show reference logs - useful to recover lost commits or find previous HEAD positions",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

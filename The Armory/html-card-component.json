@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "HTML Card Component",
+  "body": "<div class=\"card\">\n    <img src=\"{{image url}}\" alt=\"{{image description}}\">\n    <div class=\"card-content\">\n        <h3>{{Card Title}}</h3>\n        <p>{{Card Description}}</p>\n        <a href=\"{{link url}}\" class=\"btn\">Learn More</a>\n    </div>\n</div>",
+  "description": "Card component with image, title, description and link",
+  "tags": [
+    "html"
+  ],
+  "language": "html",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Download file from URL",
+  "body": "wget {{url}}",
+  "description": "Download file from internet",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

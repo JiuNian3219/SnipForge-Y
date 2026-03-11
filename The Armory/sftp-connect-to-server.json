@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "SFTP: Connect to server",
+  "body": "sftp {{username}}@{{server}}",
+  "description": "Start interactive SFTP session for file transfer",
+  "tags": [
+    "sftp"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

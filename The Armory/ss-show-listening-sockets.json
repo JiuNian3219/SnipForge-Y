@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "SS: Show listening sockets",
+  "body": "ss -tulpn",
+  "description": "Modern replacement for netstat - show listening sockets",
+  "tags": [
+    "network"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

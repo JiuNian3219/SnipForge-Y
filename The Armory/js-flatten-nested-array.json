@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Flatten nested array",
+  "body": "const nested = {{nested-array}};\nconst flat = nested.flat(Infinity);\nconsole.log('Flattened:', flat);\nreturn flat;",
+  "description": "Flatten deeply nested array structure - simplify data (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

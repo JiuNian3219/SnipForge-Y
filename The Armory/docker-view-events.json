@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: View events",
+  "body": "docker events --filter type={{type}}",
+  "description": "Monitor real-time Docker events - use type=container, image, network, etc.",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

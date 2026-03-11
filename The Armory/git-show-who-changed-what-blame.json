@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Show who changed what (blame)",
+  "body": "git blame {{file path}}",
+  "description": "Show who last modified each line of a file - useful for understanding change history",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

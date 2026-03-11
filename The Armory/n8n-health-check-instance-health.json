@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Health: Check instance health",
+  "body": "curl {{n8n-url}}/healthz",
+  "description": "Check if n8n instance is reachable - returns 200 when healthy (docs.n8n.io/hosting/logging-monitoring/monitoring/)",
+  "tags": [
+    "n8n",
+    "monitoring",
+    "curl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

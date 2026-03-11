@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Run process with nohup",
+  "body": "nohup {{command}} &",
+  "description": "Run command immune to hangups, output to nohup.out",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

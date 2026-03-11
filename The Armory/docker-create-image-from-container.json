@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Create image from container",
+  "body": "docker commit {{container name}} {{image name}}:{{tag}}",
+  "description": "Create a new image from a modified container - useful for saving container state",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

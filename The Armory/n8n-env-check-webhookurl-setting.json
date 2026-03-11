@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Env: Check WEBHOOK_URL setting",
+  "body": "docker exec {{container-name}} env | grep WEBHOOK_URL",
+  "description": "Verify WEBHOOK_URL environment variable - most common webhook issue (docs.n8n.io/hosting/configuration/environment-variables/endpoints/)",
+  "tags": [
+    "n8n",
+    "docker",
+    "webhook"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:35:00.000Z",
+  "updated_at": "2025-12-24T01:35:00.000Z"
+}

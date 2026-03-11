@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Grant privileges to user",
+  "body": "GRANT ALL PRIVILEGES ON DATABASE {{database}} TO {{username}};",
+  "description": "Grant all permissions on database to user",
+  "tags": [
+    "postgresql",
+    "database"
+  ],
+  "language": "sql",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Remove container",
+  "body": "docker rm {{container name}}",
+  "description": "Remove a stopped container",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

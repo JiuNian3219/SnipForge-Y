@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Ping: Limited count",
+  "body": "ping -c {{count}} {{host}}",
+  "description": "Ping specific number of times then stop",
+  "tags": [
+    "network"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Force kill process",
+  "body": "kill -9 {{PID}}",
+  "description": "Send KILL signal (force immediate termination)",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

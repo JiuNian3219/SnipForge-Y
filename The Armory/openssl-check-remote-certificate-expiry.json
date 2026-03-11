@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "OpenSSL: Check remote certificate expiry",
+  "body": "echo | openssl s_client -connect {{domain}}:443 2>/dev/null | openssl x509 -noout -dates",
+  "description": "Check expiration dates of remote server's certificate",
+  "tags": [
+    "openssl",
+    "ssl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

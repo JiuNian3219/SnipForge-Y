@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Certbot: Certificate only (no install)",
+  "body": "sudo certbot certonly --standalone -d {{domain}}",
+  "description": "Get certificate without auto-configuration (manual setup)",
+  "tags": [
+    "certbot",
+    "ssl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

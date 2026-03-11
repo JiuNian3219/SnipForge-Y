@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Check if string contains substring (case-insensitive)",
+  "body": "const text = '{{text}}';\nconst search = '{{search}}';\nconst contains = text.toLowerCase().includes(search.toLowerCase());\nconsole.log(`Text ${contains ? 'contains' : 'does not contain'} search term`);\nreturn contains;",
+  "description": "Search for substring ignoring case - flexible text search (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

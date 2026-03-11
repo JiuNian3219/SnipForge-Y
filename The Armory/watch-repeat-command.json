@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Watch: Repeat command",
+  "body": "watch -n {{seconds}} {{command}}",
+  "description": "Execute command repeatedly and display output",
+  "tags": [
+    "linux",
+    "monitoring"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

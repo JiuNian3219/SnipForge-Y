@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Merge two objects (shallow)",
+  "body": "const obj1 = {{object1}};\nconst obj2 = {{object2}};\nconst merged = { ...obj1, ...obj2 };\nconsole.log('Merged:', merged);\nreturn merged;",
+  "description": "Merge two objects with spread operator - obj2 properties override obj1 (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

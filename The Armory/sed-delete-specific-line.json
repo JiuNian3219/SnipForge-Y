@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Sed: Delete specific line",
+  "body": "sed '{{line number}}d' {{file}}",
+  "description": "Remove specific line by number",
+  "tags": [
+    "sed"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

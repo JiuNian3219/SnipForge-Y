@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Curl: Basic authentication",
+  "body": "curl -u {{username}}:{{password}} {{url}}",
+  "description": "GET request with basic auth credentials",
+  "tags": [
+    "curl",
+    "api"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

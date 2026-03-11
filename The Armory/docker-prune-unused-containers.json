@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Prune unused containers",
+  "body": "docker container prune -f",
+  "description": "Remove all stopped containers without confirmation",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

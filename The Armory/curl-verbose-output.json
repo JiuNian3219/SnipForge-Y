@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Curl: Verbose output",
+  "body": "curl -v {{url}}",
+  "description": "Show detailed request/response information for debugging",
+  "tags": [
+    "curl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

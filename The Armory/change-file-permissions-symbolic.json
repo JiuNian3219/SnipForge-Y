@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Change file permissions (symbolic)",
+  "body": "chmod {{u+x}} {{file}}",
+  "description": "Modify permissions symbolically (e.g., u+x adds execute for user)",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

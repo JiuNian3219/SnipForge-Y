@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Unzip: Extract to directory",
+  "body": "unzip {{archive.zip}} -d {{destination}}",
+  "description": "Extract zip to specific directory",
+  "tags": [
+    "zip"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

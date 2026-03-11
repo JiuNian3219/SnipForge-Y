@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Kill all processes by name (force)",
+  "body": "pkill -9 {{process name}}",
+  "description": "Force kill all processes matching name",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

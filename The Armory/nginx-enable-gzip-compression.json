@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Nginx: Enable gzip compression",
+  "body": "gzip on;\ngzip_vary on;\ngzip_min_length 1024;\ngzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml+rss;",
+  "description": "Enable gzip compression for text-based responses",
+  "tags": [
+    "nginx",
+    "gzip"
+  ],
+  "language": "nginx",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

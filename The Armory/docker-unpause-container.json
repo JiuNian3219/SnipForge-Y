@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker: Unpause container",
+  "body": "docker unpause {{container name}}",
+  "description": "Resume processes in a paused container",
+  "tags": [
+    "docker"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

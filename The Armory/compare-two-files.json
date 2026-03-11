@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Compare two files",
+  "body": "diff {{file1}} {{file2}}",
+  "description": "Show differences between two files",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

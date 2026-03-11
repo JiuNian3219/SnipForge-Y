@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Free: Memory usage",
+  "body": "free -h",
+  "description": "Show memory usage in human-readable format",
+  "tags": [
+    "linux",
+    "monitoring"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

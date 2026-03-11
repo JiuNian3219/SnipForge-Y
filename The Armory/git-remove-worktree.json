@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Git: Remove worktree",
+  "body": "git worktree remove {{path}}",
+  "description": "Delete a linked working tree",
+  "tags": [
+    "git"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

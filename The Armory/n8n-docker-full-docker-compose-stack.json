@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "n8n Docker: Full docker-compose stack",
+  "body": "version: '3.8'\nservices:\n  n8n:\n    image: n8nio/n8n:latest\n    container_name: n8n\n    restart: unless-stopped\n    ports:\n      - \"5678:5678\"\n    environment:\n      - N8N_HOST={{your-domain.com}}\n      - N8N_PROTOCOL=https\n      - WEBHOOK_URL=https://{{your-domain.com}}\n      - N8N_ENCRYPTION_KEY={{your-encryption-key}}\n      - DB_TYPE=postgresdb\n      - DB_POSTGRESDB_HOST=postgres\n      - DB_POSTGRESDB_DATABASE=n8n\n      - DB_POSTGRESDB_USER=n8n\n      - DB_POSTGRESDB_PASSWORD={{db-password}}\n    volumes:\n      - n8n_data:/home/node/.n8n\n    depends_on:\n      - postgres\n  \n  postgres:\n    image: postgres:16\n    restart: unless-stopped\n    environment:\n      - POSTGRES_DB=n8n\n      - POSTGRES_USER=n8n\n      - POSTGRES_PASSWORD={{db-password}}\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\nvolumes:\n  n8n_data:\n  postgres_data:",
+  "description": "Production-ready docker-compose for n8n with PostgreSQL - complete setup (docs.n8n.io/hosting/installation/server-setups/docker-compose/)",
+  "tags": [
+    "n8n",
+    "docker",
+    "docker-compose"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-24T01:45:00.000Z",
+  "updated_at": "2025-12-24T01:45:00.000Z"
+}

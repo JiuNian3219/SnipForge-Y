@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Generate random string",
+  "body": "const length = {{length}};\nconst chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\nconst random = Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');\nconsole.log('Random string:', random);\nreturn random;",
+  "description": "Generate random alphanumeric string of specified length - create tokens (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

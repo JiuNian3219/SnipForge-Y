@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "GitHub Actions: Node.js workflow",
+  "body": "name: Node.js CI\n\non: [push, pull_request]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    \n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '{{node version}}'\n        \n    - name: Install dependencies\n      run: npm install\n      \n    - name: Run tests\n      run: npm test",
+  "description": "GitHub Actions workflow for Node.js projects",
+  "tags": [
+    "github-actions",
+    "ci-cd",
+    "nodejs"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

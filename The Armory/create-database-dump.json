@@ -1,0 +1,14 @@
+{
+  "snipforge": "command",
+  "title": "Create database dump",
+  "body": "pg_dump -U {{username}} -h {{host}} -d {{database}} > {{filename}}.sql",
+  "description": "Export database to SQL file for backup",
+  "tags": [
+    "postgresql",
+    "database",
+    "backup"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

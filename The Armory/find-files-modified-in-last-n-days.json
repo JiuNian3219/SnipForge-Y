@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Find files modified in last N days",
+  "body": "find {{directory}} -mtime -{{days}}",
+  "description": "Find files modified within last N days",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

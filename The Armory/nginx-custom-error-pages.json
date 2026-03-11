@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Nginx: Custom error pages",
+  "body": "error_page 404 /404.html;\nerror_page 500 502 503 504 /50x.html;\n\nlocation = /404.html {\n    root /var/www/errors;\n    internal;\n}\n\nlocation = /50x.html {\n    root /var/www/errors;\n    internal;\n}",
+  "description": "Serve custom error pages",
+  "tags": [
+    "nginx"
+  ],
+  "language": "nginx",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

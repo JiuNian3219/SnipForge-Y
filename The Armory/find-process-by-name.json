@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Find process by name",
+  "body": "pgrep {{process name}}",
+  "description": "Find PID of processes matching name",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

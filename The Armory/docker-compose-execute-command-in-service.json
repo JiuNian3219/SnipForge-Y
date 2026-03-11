@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker Compose: Execute command in service",
+  "body": "docker-compose exec {{service name}} {{command}}",
+  "description": "Execute a command in a running service container",
+  "tags": [
+    "docker-compose"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

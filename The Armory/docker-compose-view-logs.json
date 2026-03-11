@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Docker Compose: View logs",
+  "body": "docker-compose logs -f {{service name}}",
+  "description": "Follow logs for a specific service",
+  "tags": [
+    "docker-compose"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Kubectl: Delete resource",
+  "body": "kubectl delete {{resource type}} {{resource name}} -n {{namespace}}",
+  "description": "Delete a resource - type can be pod, deployment, service, configmap, etc.",
+  "tags": [
+    "kubernetes"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T02:00:00.000Z",
+  "updated_at": "2025-12-24T02:00:00.000Z"
+}

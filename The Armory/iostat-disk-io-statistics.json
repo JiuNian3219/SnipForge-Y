@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "Iostat: Disk I/O statistics",
+  "body": "iostat -x {{interval}}",
+  "description": "Monitor disk I/O with extended stats, refresh every N seconds",
+  "tags": [
+    "linux",
+    "monitoring"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

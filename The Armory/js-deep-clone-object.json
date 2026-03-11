@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Deep clone object",
+  "body": "const original = {{object}};\nconst cloned = JSON.parse(JSON.stringify(original));\nconsole.log('Cloned:', cloned);\nreturn cloned;",
+  "description": "Create deep copy of object - avoid reference issues (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

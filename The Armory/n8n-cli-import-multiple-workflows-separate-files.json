@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "n8n CLI: Import multiple workflows (separate files)",
+  "body": "n8n import:workflow --separate --input={{directory}}",
+  "description": "Import multiple workflow JSON files from directory - useful for batch restore (community.n8n.io/t/importing-workflows-and-credentials/45142)",
+  "tags": [
+    "n8n"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-24T01:30:00.000Z",
+  "updated_at": "2025-12-24T01:30:00.000Z"
+}

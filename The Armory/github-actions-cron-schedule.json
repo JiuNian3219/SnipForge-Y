@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "GitHub Actions: Cron schedule",
+  "body": "on:\n  schedule:\n    - cron: '{{minute}} {{hour}} * * *'  # Daily at specific time",
+  "description": "Trigger workflow on schedule (cron syntax: min hour day month weekday)",
+  "tags": [
+    "github-actions",
+    "ci-cd"
+  ],
+  "language": "yaml",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

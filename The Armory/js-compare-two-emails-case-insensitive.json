@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "JS: Compare two emails (case-insensitive)",
+  "body": "const email1 = '{{email1}}';\nconst email2 = '{{email2}}';\nconst areEqual = email1.toLowerCase().trim() === email2.toLowerCase().trim();\nconsole.log(`Emails ${areEqual ? 'match' : 'do not match'}`);\nreturn areEqual;",
+  "description": "Compare two email addresses ignoring case and whitespace - common support task (developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)",
+  "tags": [
+    "javascript"
+  ],
+  "language": "javascript",
+  "created_at": "2025-12-24T01:50:00.000Z",
+  "updated_at": "2025-12-24T01:50:00.000Z"
+}

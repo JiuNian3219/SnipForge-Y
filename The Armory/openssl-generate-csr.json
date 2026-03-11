@@ -1,0 +1,13 @@
+{
+  "snipforge": "command",
+  "title": "OpenSSL: Generate CSR",
+  "body": "openssl req -new -newkey rsa:2048 -nodes -keyout {{key.key}} -out {{request.csr}} -subj \"/CN={{domain}}/O={{Organization}}\"",
+  "description": "Generate Certificate Signing Request for CA",
+  "tags": [
+    "openssl",
+    "ssl"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}

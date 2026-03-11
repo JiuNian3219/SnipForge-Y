@@ -1,0 +1,12 @@
+{
+  "snipforge": "command",
+  "title": "Clear terminal screen",
+  "body": "clear",
+  "description": "Clear all text from terminal screen",
+  "tags": [
+    "linux"
+  ],
+  "language": "bash",
+  "created_at": "2025-12-21T10:00:00.000Z",
+  "updated_at": "2025-12-21T10:00:00.000Z"
+}
