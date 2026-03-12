@@ -47,7 +47,9 @@ Click the X button on a library. All remote commands from that library are remov
 | Multi-repo | Yes, subscribe to many | User can pull from k8s-team, support-tools, dev-builds simultaneously |
 | Scanning | Scoped to manifest directory | Monorepo safe — only scans JSON files under the `.snipforge.json` location |
 | Force sync | Manual = full diff, auto = SHA skip | Manual click should always reconcile; auto shouldn't waste API calls |
-| Dependencies | None | Node.js built-in `fetch` (Node 18+), GitHub API is straightforward REST |
+| API strategy | GraphQL reads, REST writes | GraphQL fetches entire directories in 1 call (vs N REST calls). REST for auth (no choice) and writes (simple, infrequent) |
+| Input format | Full GitHub URLs only | Unambiguous — carries owner, repo, branch, subpath. Drop `owner/repo` shorthand |
+| Dependencies | None | Node.js built-in `fetch` (Node 18+), GitHub REST + GraphQL APIs |
 
 ### GitHub OAuth Setup
 
@@ -169,22 +171,23 @@ ALTER TABLE commands ADD COLUMN remote_path TEXT;
 #### Sync Algorithm
 
 ```
-1. Fetch repo tree via GitHub API
-2. Find .snipforge.json manifest (validate it's a SnipForge library)
-3. Scope scan to the manifest's directory (monorepo safe)
-4. If stored manifest_path differs from actual location → update it (self-correcting)
-5. Get latest commit SHA
-6. If SHA matches last sync → skip (unless force sync from manual click)
-7. Fetch all JSON files under the manifest directory, validate each (must have title + body)
-8. Diff against local remote commands for this library:
+1. Fetch repo info via GraphQL (branch, permissions, latest commit SHA) — 1 call
+2. If SHA matches last sync → skip (unless force sync from manual click)
+3. Fetch manifest directory tree with inline file contents via GraphQL — 1 call
+4. Find .snipforge.json manifest(s), scope to subscribed library's directory
+5. If stored manifest_path differs from actual location → update it (self-correcting)
+6. Parse all JSON files from the tree response, validate each (must have title + body)
+7. Diff against local remote commands for this library:
    a. File exists remotely but not locally → ADD
    b. File exists both, remote updated_at > local → UPDATE
    c. File exists locally but not remotely → REMOVE
    d. Unchanged → SKIP
-9. Execute all changes in a single SQLite transaction
-10. Update library.last_synced_at and library.last_synced_sha
-11. Return SyncResult { added, updated, removed, errors }
+8. Execute all changes in a single SQLite transaction
+9. Update library.last_synced_at and library.last_synced_sha
+10. Return SyncResult { added, updated, removed, errors }
 ```
+
+*Total: 2 API calls per sync (or 1 if SHA unchanged), regardless of library size.*
 
 **Force sync**: When a user manually clicks "Sync", the SHA check is bypassed (`force: true`). This ensures locally deleted commands are re-downloaded. Auto-sync (Sync All) still uses SHA optimization.
 
@@ -558,3 +561,68 @@ Key changes:
 3. Subscribe to a repo with read/write access only → no badge, publish/unpublish buttons hidden
 4. Sync a library after permission change → role updates, controls adjust
 5. Keyboard shortcuts (p, u, Shift+P) only work when user has publish rights
+
+#### Phase 6: API Optimization & Multi-Library Support
+
+Addresses two shortcomings from the original design: excessive REST API calls (one per command file) and single-library-per-repo assumption. Should have been REST + GraphQL from day 1.
+
+**Context:** The Armory has 400+ commands. Subscribing made ~406 API calls (4× duplicate `/repos/` + 1 per command file via `/contents/`). A rate limit 403 was misidentified as "Access denied", which nuked the token, cascading to unauthenticated mode (60 req/hr). Multiple libraries in the same repo (e.g., template + The Armory) were invisible — `tree.find()` only returned the first manifest.
+
+##### GitHub API: GraphQL for reads (issue [#14](https://github.com/ArtluxDM/SnipForge/issues/14))
+
+**Problem:** REST API requires one call per file. 400 commands = 400 calls = ~40 seconds + rate limit pressure.
+
+**Solution:** Mixed API strategy:
+- **GraphQL for reads** — browse, sync, repo info, user info. Single query fetches an entire directory with all file contents.
+- **REST for auth** — Device Flow is REST-only, no alternative.
+- **REST for writes** — publish/unpublish/init. Simple, infrequent, no batching needed.
+
+**API call reduction:**
+
+| Operation | Before | After |
+|---|---|---|
+| Subscribe (400 commands) | ~406 calls | 2 calls |
+| Sync (400 commands, changed) | ~404 calls | 2 calls |
+| Sync (unchanged, SHA match) | ~3 calls | 1 call |
+
+**Key changes planned:**
+- `getRepoInfo()` — single fetch, returns branch + permissions + owner info. Passed through as context, never re-fetched.
+- `graphqlFetch()` — wrapper around `POST /graphql`, same auth token, same error handling as `githubFetch()`
+- `browseLibrary()` — GraphQL tree query with inline blob content, scoped to manifest directory
+- `subscribeToLibrary()` / `syncLibrary()` — receive repo context, no redundant calls
+- `detectPermission()` — derived from repo context (already fetched), no separate call
+- `parseGitHubError()` — DONE (landed in error handling fix). Distinguishes rate limit vs bad credentials vs permission denied. Prevents token deletion on transient errors.
+
+**Deliverables:**
+- [ ] `getRepoInfo()` single-fetch context object
+- [ ] `graphqlFetch()` wrapper with error handling
+- [ ] `browseLibrary()` uses GraphQL tree query with content
+- [ ] `subscribeToLibrary()` makes ≤3 API calls regardless of library size
+- [ ] `syncLibrary()` makes ≤3 API calls regardless of library size
+- [ ] REST retained for auth + writes (no regression)
+
+##### Multi-library repos: discovery + picker (issue [#15](https://github.com/ArtluxDM/SnipForge/issues/15))
+
+**Problem:** `browseLibrary()` uses `tree.find()` — returns only the first `.snipforge.json`. Repos with multiple libraries (e.g., our repo with template + The Armory) only expose whichever sorts first.
+
+**Solution:**
+
+**Input format — full GitHub URLs only.** Drop `owner/repo` shorthand:
+- URL carries owner, repo, branch, and subpath unambiguously
+- `ArtluxDM/SnipForge/The Armory` is ambiguous (is "The" a repo name or subpath?)
+- Users copy-paste from browser anyway
+- GitHub URLs are case-insensitive; shorthand parsing isn't
+
+**Subscribe flow:**
+1. URL with subpath (e.g., `https://github.com/ArtluxDM/SnipForge/tree/main/The%20Armory`) → scope to that directory, find the one manifest, subscribe directly
+2. URL without subpath + single manifest → subscribe directly (current behavior)
+3. URL without subpath + multiple manifests → show picker modal with library name + directory path for each
+
+**Deliverables:**
+- [ ] `parseRepoUrl()` only accepts full GitHub URLs
+- [ ] `browseLibrary()` discovers ALL manifests (not just first)
+- [ ] URL with subpath → scoped subscribe
+- [ ] URL without subpath + multiple manifests → picker modal
+- [ ] Picker shows library name + directory path
+
+**Depends on:** #14 (GraphQL reads — tree discovery benefits from single query)

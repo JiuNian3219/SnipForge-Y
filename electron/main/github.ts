@@ -65,6 +65,31 @@ async function githubFetch(path: string, options: RequestInit = {}): Promise<Res
     return fetch(url, { ...options, headers })
 }
 
+/** Parse a GitHub API error response into a user-facing message */
+async function parseGitHubError(res: Response): Promise<string> {
+    try {
+        const body = await res.json()
+        const msg = (body as any).message || ''
+
+        if (res.status === 403) {
+            if (/rate limit/i.test(msg)) {
+                const reset = res.headers.get('x-ratelimit-reset')
+                const retryAfter = reset
+                    ? ` Try again after ${new Date(Number(reset) * 1000).toLocaleTimeString()}.`
+                    : ''
+                return `GitHub API rate limit exceeded.${retryAfter}`
+            }
+            if (/bad credentials/i.test(msg)) {
+                return 'GitHub token is invalid or expired. Re-authenticate in Settings → Connectors.'
+            }
+        }
+
+        return msg || `GitHub API error: ${res.status}`
+    } catch {
+        return `GitHub API error: ${res.status}`
+    }
+}
+
 // ── Auth: Device Flow ─────────────────────────────────────────────
 
 // State for the active polling session
@@ -150,14 +175,21 @@ export async function getAuthenticatedUser(): Promise<GitHubUser | null> {
 
     try {
         const res = await githubFetch('/user')
-        if (!res.ok) return null
+        if (!res.ok) {
+            // Distinguish bad token from transient errors (rate limit, network)
+            if (res.status === 401) return null // genuinely invalid token
+            // 403 or other — don't treat as invalid token, throw so callers can handle
+            throw new Error(await parseGitHubError(res))
+        }
         const data = await res.json()
         return {
             login: data.login,
             avatar_url: data.avatar_url,
             name: data.name,
         }
-    } catch {
+    } catch (e) {
+        // Re-throw API errors (rate limit, etc.) — only swallow network failures
+        if (e instanceof Error && !e.message.includes('fetch')) throw e
         return null
     }
 }
@@ -166,14 +198,18 @@ export async function getAuthStatus(): Promise<{ authenticated: boolean; user: G
     const token = getStoredToken()
     if (!token) return { authenticated: false, user: null }
 
-    const user = await getAuthenticatedUser()
-    if (!user) {
-        // Token is invalid, clear it
-        clearToken()
-        return { authenticated: false, user: null }
+    try {
+        const user = await getAuthenticatedUser()
+        if (!user) {
+            // Token is genuinely invalid (401), clear it
+            clearToken()
+            return { authenticated: false, user: null }
+        }
+        return { authenticated: true, user }
+    } catch {
+        // Transient error (rate limit, network) — token might still be valid, don't clear
+        return { authenticated: true, user: null }
     }
-
-    return { authenticated: true, user }
 }
 
 export function logout(): void {
@@ -223,8 +259,7 @@ async function getRepoDefaultBranch(owner: string, repo: string): Promise<string
     const res = await githubFetch(`/repos/${owner}/${repo}`)
     if (!res.ok) {
         if (res.status === 404) throw new Error(`Repository not found: ${owner}/${repo}`)
-        if (res.status === 403) throw new Error('Access denied. Check your GitHub permissions.')
-        throw new Error(`GitHub API error: ${res.status}`)
+        throw new Error(await parseGitHubError(res))
     }
     const data = await res.json()
     return data.default_branch || 'main'
@@ -248,21 +283,21 @@ export async function detectPermission(owner: string, repo: string): Promise<Lib
 
 async function getLatestCommitSha(owner: string, repo: string, branch: string): Promise<string> {
     const res = await githubFetch(`/repos/${owner}/${repo}/commits/${branch}`)
-    if (!res.ok) throw new Error(`Failed to get latest commit: ${res.status}`)
+    if (!res.ok) throw new Error(await parseGitHubError(res))
     const data = await res.json()
     return data.sha
 }
 
 async function getRepoTree(owner: string, repo: string, branch: string): Promise<Array<{ path: string; type: string; sha: string }>> {
     const res = await githubFetch(`/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`)
-    if (!res.ok) throw new Error(`Failed to get repo tree: ${res.status}`)
+    if (!res.ok) throw new Error(await parseGitHubError(res))
     const data = await res.json()
     return data.tree || []
 }
 
 async function getFileContent(owner: string, repo: string, filePath: string, branch: string): Promise<string> {
     const res = await githubFetch(`/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`)
-    if (!res.ok) throw new Error(`Failed to get file: ${filePath} (${res.status})`)
+    if (!res.ok) throw new Error(await parseGitHubError(res))
     const data = await res.json()
 
     if (data.encoding === 'base64') {
