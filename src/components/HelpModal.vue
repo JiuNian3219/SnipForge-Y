@@ -6,7 +6,7 @@
         <button class="close-button" @click="$emit('cancel')">×</button>
       </div>
       <div class="modal-body">
-        <div v-html="markdownContent" class="markdown-content"></div>
+        <div v-html="markdownContent" class="markdown-content" @click="handleLinkClick"></div>
       </div>
       <div class="modal-footer">
         <button @click="$emit('cancel')" class="close-button-footer">Got it!</button>
@@ -33,19 +33,35 @@ defineEmits<{
   cancel: []
 }>()
 
-// Parse markdown content and inject platform-specific global hotkey
+// Parse markdown content and inject platform-specific values
 const markdownContent = computed(() => {
   const isMac = navigator.userAgent.toLowerCase().includes('mac')
-  const globalHotkey = isMac ? '⌘⇧Space' : 'Ctrl⇧Space'
 
-  // Replace the platform-agnostic text with actual hotkey
-  const processedMarkdown = helpMarkdown.replace(
-    '**⌘⇧Space** (Mac) / **Ctrl⇧Space** (Windows/Linux)',
-    `**${globalHotkey}**`
-  )
+  // Replace platform-agnostic shortcuts with actual keys
+  let processed = helpMarkdown
+    .replace('**⌘⇧Space** (Mac) / **Ctrl⇧Space** (Windows/Linux)', isMac ? '**⌘⇧Space**' : '**Ctrl⇧Space**')
+    .replace('**⌘F** (Mac) / **Ctrl+F** (Windows/Linux)', isMac ? '**⌘F**' : '**Ctrl+F**')
 
-  return DOMPurify.sanitize(marked.parse(processedMarkdown, { async: false }) as string)
+  return DOMPurify.sanitize(marked.parse(processed, { async: false }) as string)
 })
+
+// Open external links in system browser
+const handleLinkClick = async (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'A') {
+    event.preventDefault()
+    let url = (target as HTMLAnchorElement).href
+    if (url.includes('localhost:5173/')) {
+      url = url.split('localhost:5173/')[1]
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url
+      }
+    }
+    if (url) {
+      await (window as any).electronAPI.shell.openExternal(url)
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -91,13 +107,16 @@ const markdownContent = computed(() => {
 }
 
 .markdown-content strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.markdown-content li > strong:first-child {
   background-color: var(--border);
   border: 1px solid var(--border-hover);
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
   min-width: 20px;
   text-align: center;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -113,8 +132,25 @@ const markdownContent = computed(() => {
   color: var(--text-primary);
 }
 
+.markdown-content h3 {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 16px 0 8px 0;
+}
+
 .markdown-content p {
   margin: 0 0 16px 0;
+}
+
+.markdown-content a {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
 }
 
 .close-button-footer {

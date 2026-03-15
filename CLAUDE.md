@@ -73,6 +73,7 @@ Feature documentation lives in `docs/`. These are living documents — plan, imp
 | `docs/settings.md` | Settings — infrastructure, General tab, connectors, auto-sync, shortcuts | Phases 1-3 complete |
 | `docs/variable-substitution.md` | Variable substitution — `{{variable}}` templates, copy flow, highlighting | Current state documented, #11 planned |
 | `docs/auto-update.md` | Auto-update — version checking, download, install via electron-updater | Not started, needs scoping session |
+| `docs/db-health.md` | Database health — integrity checks, orphan detection, VACUUM | Deepness TBD |
 
 ## Development
 
