@@ -60,6 +60,20 @@
       >
         <LinkIcon :size="16" />
       </button>
+      <button
+        @click="imageFileInput?.click()"
+        type="button"
+        title="Insert Image (or paste / drag-drop)"
+      >
+        <ImageIcon :size="16" />
+      </button>
+      <input
+        ref="imageFileInput"
+        type="file"
+        accept="image/*"
+        style="display: none"
+        @change="handleImageUpload"
+      />
     </div>
 
     <!-- Editor -->
@@ -100,12 +114,46 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
+
+const VAR_REGEXP = /\{\{\s*[a-zA-Z0-9][a-zA-Z0-9 _-]*\s*\}\}/g
+
+const variableHighlight = Extension.create({
+  name: 'variableHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('variableHighlight'),
+        props: {
+          decorations(state) {
+            const decorations: Decoration[] = []
+            state.doc.descendants((node, pos) => {
+              if (!node.isText || !node.text) return
+              VAR_REGEXP.lastIndex = 0
+              let match
+              while ((match = VAR_REGEXP.exec(node.text)) !== null) {
+                decorations.push(
+                  Decoration.inline(pos + match.index, pos + match.index + match[0].length, {
+                    class: 'snipforge-variable'
+                  })
+                )
+              }
+            })
+            return DecorationSet.create(state.doc, decorations)
+          }
+        }
+      })
+    ]
+  }
+})
 import Image from '@tiptap/extension-image'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
-import { Bold, Italic, Strikethrough, List, ListOrdered, ListTodo, Link as LinkIcon, X } from 'lucide-vue-next'
+import { Bold, Italic, Strikethrough, List, ListOrdered, ListTodo, Link as LinkIcon, X, Image as ImageIcon } from 'lucide-vue-next'
 
 interface Props {
   modelValue: string
@@ -120,6 +168,38 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+// Image file input
+const imageFileInput = ref<HTMLInputElement>()
+
+// Resize image to max 1200px and return as PNG data URI
+const processImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = (e) => {
+      const img = new window.Image()
+      img.onerror = reject
+      img.onload = () => {
+        const MAX = 1200
+        let w = img.naturalWidth
+        let h = img.naturalHeight
+        if (w > MAX || h > MAX) {
+          const ratio = Math.min(MAX / w, MAX / h)
+          w = Math.round(w * ratio)
+          h = Math.round(h * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 // Link dialog state
 const showLinkDialog = ref(false)
 const linkUrl = ref('')
@@ -127,8 +207,10 @@ const linkInput = ref<HTMLInputElement>()
 
 const editor = useEditor({
   extensions: [
+    variableHighlight,
     StarterKit, // Includes Link extension by default
     Image.configure({
+      allowBase64: true,
       HTMLAttributes: {
         class: 'editor-image'
       }
@@ -143,8 +225,37 @@ const editor = useEditor({
   ],
   content: props.modelValue,
   editorProps: {
-    attributes: {
-      class: 'prose prose-invert'
+    attributes: { class: 'prose prose-invert' },
+    handlePaste: (view, event) => {
+      const items = Array.from(event.clipboardData?.items ?? [])
+      // Only intercept if there's no rich HTML content — let TipTap handle regular pastes
+      const hasHtml = items.some(item => item.type === 'text/html')
+      if (hasHtml) return false
+      const imageItem = items.find(item => item.type.startsWith('image/'))
+      if (!imageItem) return false
+      const file = imageItem.getAsFile()
+      if (!file) return false
+      processImage(file).then(src => {
+        const node = view.state.schema.nodes.image?.create({ src })
+        if (node) view.dispatch(view.state.tr.replaceSelectionWith(node))
+      })
+      return true
+    },
+    handleDrop: (view, event, _slice, moved) => {
+      if (moved) return false
+      const files = Array.from(event.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'))
+      if (!files.length) return false
+      event.preventDefault()
+      const coords = { left: event.clientX, top: event.clientY }
+      files.forEach(file => {
+        processImage(file).then(src => {
+          const node = view.state.schema.nodes.image?.create({ src })
+          if (!node) return
+          const pos = view.posAtCoords(coords)
+          view.dispatch(view.state.tr.insert(pos?.pos ?? view.state.selection.from, node))
+        })
+      })
+      return true
     }
   },
   onUpdate: ({ editor }) => {
@@ -178,6 +289,14 @@ const openLinkDialog = () => {
 const closeLinkDialog = () => {
   showLinkDialog.value = false
   linkUrl.value = ''
+}
+
+const handleImageUpload = async (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !editor.value) return
+  const src = await processImage(file)
+  editor.value.chain().focus().setImage({ src }).run()
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 // Validate URL to prevent javascript:/data:/vbscript: injection
@@ -425,6 +544,11 @@ onUnmounted(() => {
   height: auto;
   border-radius: 4px;
   margin: 8px 0;
+}
+
+.editor-content :deep(.snipforge-variable) {
+  color: #e8a948;
+  font-weight: 500;
 }
 
 .editor-content :deep(.ProseMirror code) {
