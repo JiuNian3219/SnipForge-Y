@@ -281,14 +281,16 @@ export async function initLocalLibrary(libraryId: number, name: string, descript
 
 // ── Export as Library (Zip) ─────────────────────────────────────
 
-function slugify(title: string): string {
-    return title
+export function slugify(title: string): string {
+    const slug = title
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[^a-z0-9\s_-]/g, '')
         .trim()
         .replace(/[\s_]+/g, '-')
         .replace(/-+/g, '-')
-        || 'untitled'
+    if (!slug) return 'untitled'
+    // Filesystem limit: 255 bytes minus .json extension
+    return slug.slice(0, 200)
 }
 
 export interface ExportLibraryInput {

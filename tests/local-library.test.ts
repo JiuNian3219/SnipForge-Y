@@ -1,0 +1,185 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import path from 'node:path'
+import os from 'node:os'
+import { promises as fs } from 'node:fs'
+import { scanLocalFolder, slugify } from '../electron/main/local-library'
+
+let tmpDir: string
+
+beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'snipforge-test-lib-'))
+})
+
+afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true })
+})
+
+// ── slugify ─────────────────────────────────────────────────────
+
+describe('slugify', () => {
+    it('converts title to lowercase hyphenated slug', () => {
+        expect(slugify('OpenSSL: Create Token')).toBe('openssl-create-token')
+    })
+
+    it('handles multiple spaces', () => {
+        expect(slugify('My  Cool   Command')).toBe('my-cool-command')
+    })
+
+    it('converts underscores to hyphens', () => {
+        expect(slugify('snake_case_title')).toBe('snake-case-title')
+    })
+
+    it('truncates to 200 characters', () => {
+        const long = 'a'.repeat(300)
+        expect(slugify(long)).toHaveLength(200)
+    })
+
+    it('strips non-alphanumeric characters', () => {
+        expect(slugify('Curl: Basic Auth (GET)')).toBe('curl-basic-auth-get')
+        expect(slugify('K8s — Get Pod Logs!')).toBe('k8s-get-pod-logs')
+    })
+
+    it('collapses consecutive hyphens', () => {
+        expect(slugify('test---multiple---hyphens')).toBe('test-multiple-hyphens')
+    })
+
+    it('returns "untitled" for empty/whitespace input', () => {
+        expect(slugify('')).toBe('untitled')
+        expect(slugify('   ')).toBe('untitled')
+    })
+
+    it('handles strings with only special characters', () => {
+        expect(slugify('!!!@@@')).toBe('untitled')
+    })
+})
+
+// ── scanLocalFolder ─────────────────────────────────────────────
+
+describe('scanLocalFolder', () => {
+    it('reads manifest and command files', async () => {
+        // Create manifest
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            snipforge: 'library',
+            name: 'Test Lib',
+            description: 'A test library',
+            format_version: '1.0',
+        }))
+
+        // Create a command file
+        await fs.writeFile(path.join(tmpDir, 'test-cmd.json'), JSON.stringify({
+            snipforge: 'command',
+            title: 'Test Command',
+            body: 'echo test',
+            description: 'A test command',
+            tags: ['test'],
+            language: 'bash',
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+        }))
+
+        const result = await scanLocalFolder(tmpDir)
+
+        expect(result.manifest.name).toBe('Test Lib')
+        expect(result.manifestPath).toBe('.snipforge.json')
+        expect(result.commands).toHaveLength(1)
+        expect(result.commands[0].path).toBe('test-cmd.json')
+        expect(result.commands[0].command.title).toBe('Test Command')
+        expect(result.commands[0].command.tags).toEqual(['test'])
+    })
+
+    it('throws when manifest is missing', async () => {
+        await expect(scanLocalFolder(tmpDir)).rejects.toThrow('missing .snipforge.json')
+    })
+
+    it('throws when manifest is invalid JSON', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), 'not json{{{')
+        await expect(scanLocalFolder(tmpDir)).rejects.toThrow('not valid JSON')
+    })
+
+    it('throws when manifest has no name field', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            description: 'no name',
+        }))
+        await expect(scanLocalFolder(tmpDir)).rejects.toThrow('missing "name" field')
+    })
+
+    it('skips files without title or body', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            name: 'Test', description: '', format_version: '1.0',
+        }))
+
+        // Valid command
+        await fs.writeFile(path.join(tmpDir, 'valid.json'), JSON.stringify({
+            title: 'Valid', body: 'echo valid',
+        }))
+
+        // Missing body
+        await fs.writeFile(path.join(tmpDir, 'no-body.json'), JSON.stringify({
+            title: 'No Body',
+        }))
+
+        // Missing title
+        await fs.writeFile(path.join(tmpDir, 'no-title.json'), JSON.stringify({
+            body: 'echo no title',
+        }))
+
+        // Empty title
+        await fs.writeFile(path.join(tmpDir, 'empty-title.json'), JSON.stringify({
+            title: '   ', body: 'echo empty',
+        }))
+
+        const result = await scanLocalFolder(tmpDir)
+        expect(result.commands).toHaveLength(1)
+        expect(result.commands[0].command.title).toBe('Valid')
+    })
+
+    it('skips invalid JSON files gracefully', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            name: 'Test', description: '', format_version: '1.0',
+        }))
+
+        await fs.writeFile(path.join(tmpDir, 'valid.json'), JSON.stringify({
+            title: 'Valid', body: 'echo valid',
+        }))
+
+        await fs.writeFile(path.join(tmpDir, 'broken.json'), 'not json at all')
+
+        const result = await scanLocalFolder(tmpDir)
+        expect(result.commands).toHaveLength(1)
+    })
+
+    it('applies defaults for missing optional fields', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            name: 'Test', description: '', format_version: '1.0',
+        }))
+
+        await fs.writeFile(path.join(tmpDir, 'minimal.json'), JSON.stringify({
+            title: 'Minimal',
+            body: 'echo minimal',
+        }))
+
+        const result = await scanLocalFolder(tmpDir)
+        const cmd = result.commands[0].command
+
+        expect(cmd.description).toBe('')
+        expect(cmd.tags).toEqual([])
+        expect(cmd.language).toBe('plaintext')
+        expect(cmd.created_at).toBeTruthy()
+        expect(cmd.updated_at).toBeTruthy()
+    })
+
+    it('does not scan subdirectories', async () => {
+        await fs.writeFile(path.join(tmpDir, '.snipforge.json'), JSON.stringify({
+            name: 'Test', description: '', format_version: '1.0',
+        }))
+
+        const subDir = path.join(tmpDir, 'subdir')
+        await fs.mkdir(subDir)
+        await fs.writeFile(path.join(subDir, 'nested.json'), JSON.stringify({
+            title: 'Nested', body: 'echo nested',
+        }))
+
+        const result = await scanLocalFolder(tmpDir)
+        expect(result.commands).toHaveLength(0)
+    })
+})

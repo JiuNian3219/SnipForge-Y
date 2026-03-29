@@ -14,6 +14,7 @@
                         type="text"
                         placeholder="Enter command title"
                         ref="titleInput"
+                        maxlength="500"
                     />
                 </div>
 
@@ -348,11 +349,12 @@
       return
     }
 
-    // Convert tags input to JSON array
+    // Convert tags input to JSON array, cap at 12
     const tags = tagsInput.value
       .split(',')
       .map(tag => tag.trim())
       .filter(tag => tag.length > 0)
+      .slice(0, 12)
 
     emit('save', {
       title: formData.value.title.trim(),

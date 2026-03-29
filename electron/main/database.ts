@@ -6,11 +6,10 @@ import type { Command, Library, LibraryType, LibraryPermission, SyncResult } fro
 export type { Command, Library }
 // Initialize and export the database connection
 let db: Database.Database | null = null;
-export function initializeDatabase() {
+export function initializeDatabase(customDbPath?: string) {
     console.log('Initializing database...')
     // get the path where electron stores user data
-    const userDataPath = app.getPath('userData');
-    const dbPath = path.join(userDataPath, 'snipforge.db')
+    const dbPath = customDbPath || path.join(app.getPath('userData'), 'snipforge.db')
     console.log('Database path:', dbPath)
 try {
     //create or open the database
@@ -155,6 +154,7 @@ export function updateCommand(id: number, updates: Partial<Command>): boolean{
     if (!db) throw new Error("Database not initialized");
 
     const now = new Date().toISOString();
+    const title = (updates.title || '').slice(0, MAX_TITLE_LENGTH)
     const stmt = db.prepare(`
         UPDATE commands
         SET title = ?, body = ?, description = ?, tags = ?, language = ?, updated_at = ?,
@@ -162,7 +162,7 @@ export function updateCommand(id: number, updates: Partial<Command>): boolean{
         WHERE id = ?
     `);
     const result = stmt.run(
-        updates.title || '',
+        title,
         updates.body || '',
         updates.description || '',
         updates.tags || '[]',
@@ -180,15 +180,18 @@ export function deleteCommand(id: number): boolean {
     return result.changes > 0;
 }
 // add a new command to DB
+const MAX_TITLE_LENGTH = 500
+
 export function addCommand(command: Omit<Command, 'id' | 'created_at' | 'updated_at'>): number {
     if (!db) throw new Error("Database not initialized");
+    const title = command.title?.slice(0, MAX_TITLE_LENGTH)
     const now = new Date().toISOString();
     const stmt = db.prepare(`
         INSERT INTO commands (title, body, description, tags, language, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
-        command.title,
+        title,
         command.body,
         command.description || '',
         command.tags || '[]',
@@ -396,15 +399,17 @@ export function syncRemoteCommands(
                 errors.push(`Failed to remove ${remotePath}: ${(e as Error).message}`)
             }
         }
-        updateLibrarySync(libraryId, sha)
+        if (errors.length === 0) {
+            updateLibrarySync(libraryId, sha)
+        }
     })
 
     transaction()
 
     return {
-        added: toAdd.length,
-        updated: toUpdate.length,
-        removed: toRemove.length,
+        added: toAdd.length - errors.filter(e => e.startsWith('Failed to add')).length,
+        updated: toUpdate.length - errors.filter(e => e.startsWith('Failed to update')).length,
+        removed: toRemove.length - errors.filter(e => e.startsWith('Failed to remove')).length,
         errors
     }
 }
