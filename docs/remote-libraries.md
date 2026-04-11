@@ -69,6 +69,19 @@ The app uses [GitHub Device Flow](https://docs.github.com/en/apps/oauth-apps/bui
 
 The `client_id` is public and safe to embed — no secret is needed for Device Flow.
 
+### Auth Hardening
+
+#### Remove dead Device Flow interval state (issue [#17](https://github.com/ArtluxDM/SnipForge/issues/17))
+
+Plan:
+- remove the unused module-level `deviceFlowInterval` state from `electron/main/github.ts`
+- keep `startDeviceFlow()` as a thin pass-through of GitHub's response payload, including `interval`
+- add regression coverage around the Device Flow init response contract so the polling interval cannot silently drift again
+
+Final notes:
+- polling cadence is renderer-owned in `SettingsModal.vue`, which already reads `interval` from the `auth:login` response and handles GitHub `slow_down` responses locally
+- the backend no longer keeps misleading auth state that is neither read nor authoritative
+
 **Auth flow:**
 
 1. User clicks "Sign in with GitHub"

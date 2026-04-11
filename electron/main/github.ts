@@ -372,9 +372,6 @@ async function discoverLibraries(owner: string, repo: string, context: RepoConte
 
 // ── Auth: Device Flow ─────────────────────────────────────────────
 
-// State for the active polling session
-let deviceFlowInterval: string | null = null
-
 export interface DeviceFlowInit {
     user_code: string
     verification_uri: string
@@ -401,7 +398,6 @@ export async function startDeviceFlow(): Promise<DeviceFlowInit> {
     }
 
     const data = await res.json()
-    deviceFlowInterval = data.device_code
     return data
 }
 
