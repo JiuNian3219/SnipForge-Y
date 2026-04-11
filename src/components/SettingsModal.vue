@@ -25,13 +25,6 @@
           >
             Libraries
           </button>
-          <button
-            class="tab-button"
-            :class="{ active: activeTab === 'management' }"
-            @click="activeTab = 'management'"
-          >
-            Manage Commands
-          </button>
         </div>
         <button class="close-button" @click="$emit('cancel')">×</button>
       </div>
@@ -361,7 +354,14 @@
             <!-- Library list -->
             <div v-if="libraries.length > 0" class="library-list">
               <div v-for="lib in libraries" :key="lib.id" class="library-item">
-                <div class="library-info">
+                <div
+                  class="library-info"
+                  :class="{ 'library-info--interactive': !!lib.manifest_path }"
+                  :tabindex="lib.manifest_path ? 0 : -1"
+                  @click="lib.manifest_path ? openLibraryManagement(lib.id) : undefined"
+                  @keydown.enter.prevent="lib.manifest_path ? openLibraryManagement(lib.id) : undefined"
+                  @keydown.space.prevent="lib.manifest_path ? openLibraryManagement(lib.id) : undefined"
+                >
                   <div class="library-name-row">
                     <span class="library-name">
                       <!-- Folder icon for local, GitHub icon for remote -->
@@ -374,6 +374,10 @@
                       {{ lib.name }}
                     </span>
                     <span
+                      v-if="defaultWritableLibrary?.id === lib.id"
+                      class="library-role-badge default"
+                    >Default</span>
+                    <span
                       v-if="lib.type === 'github' && (lib.permission === 'owner' || lib.permission === 'curator')"
                       class="library-role-badge"
                       :class="lib.permission"
@@ -382,7 +386,7 @@
                       v-if="lib.manifest_path"
                       class="toggle-switch toggle-switch--small"
                       :class="{ on: lib.auto_sync === 1 }"
-                      @click="handleToggleLibraryAutoSync(lib)"
+                      @click.stop="handleToggleLibraryAutoSync(lib)"
                       role="switch"
                       :aria-checked="lib.auto_sync === 1"
                       :title="lib.auto_sync === 1 ? 'Disable auto-sync' : 'Enable auto-sync'"
@@ -391,6 +395,9 @@
                     </button>
                   </div>
                   <span class="library-repo" :title="lib.github_repo">{{ lib.type === 'local' ? shortenPath(lib.github_repo) : lib.github_repo }}</span>
+                  <span v-if="lib.manifest_path" class="library-command-count">
+                    {{ getLibraryCommandCount(lib.id) }} command{{ getLibraryCommandCount(lib.id) !== 1 ? 's' : '' }}
+                  </span>
                   <span v-if="!lib.manifest_path" class="library-status not-initialized">
                     Not initialized
                   </span>
@@ -410,6 +417,13 @@
                     </button>
                   </template>
                   <template v-else>
+                    <button
+                      @click="openLibraryManagement(lib.id)"
+                      class="library-action-btn manage"
+                      title="Manage library commands"
+                    >
+                      Manage
+                    </button>
                     <button
                       @click="handleSyncLibrary(lib.id)"
                       class="library-action-btn"
@@ -441,102 +455,119 @@
               <p class="section-description">Open a local folder or subscribe to a GitHub repo.</p>
             </div>
 
+            <div v-if="managedLibrary" class="library-management-panel">
+              <div class="library-management-header">
+                <button class="library-management-back" @click="closeLibraryManagement">
+                  ← Back
+                </button>
+                <div class="library-management-copy">
+                  <div class="library-management-title-row">
+                    <h4>{{ managedLibrary.name }}</h4>
+                    <span
+                      v-if="defaultWritableLibrary?.id === managedLibrary.id"
+                      class="library-role-badge default"
+                    >Default writable</span>
+                  </div>
+                  <p class="library-management-path">
+                    {{ managedLibrary.type === 'local' ? managedLibrary.github_repo : managedLibrary.github_repo }}
+                  </p>
+                  <p class="library-management-note">
+                    {{ managementContextNote }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="management-controls">
+                <div class="controls-row">
+                  <div class="bulk-selection">
+                    <input
+                      type="checkbox"
+                      class="select-all-checkbox"
+                      :checked="isAllSelected"
+                      :indeterminate="isIndeterminate"
+                      @change="toggleSelectAll"
+                    />
+                    <span class="selection-counter" :class="{ muted: selectedCommandIds.length === 0 }">
+                      {{ selectedCommandIds.length }} selected
+                    </span>
+                    <button @click.stop="toggleManagementFilterDropdown" :class="['management-filter-button', { active: selectedManagementTags.length > 0 }]" title="Filter by tags">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+                      </svg>
+                    </button>
+
+                    <div v-if="showManagementFilterDropdown" class="filter-dropdown" @click.stop>
+                      <TagSelector
+                        :available-tags="managedAvailableTags"
+                        :selected-tags="selectedManagementTags"
+                        title="Filter by Tags"
+                        @toggle="toggleManagementTag"
+                        @clear-all="clearManagementTags"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="spacer"></div>
+
+                  <div class="action-buttons">
+                    <button
+                      v-if="canDeleteManagedCommands"
+                      @click="handleBulkDelete"
+                      :disabled="selectedCommandIds.length === 0"
+                      class="action-button delete-icon-button"
+                      title="Delete selected"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                    <button
+                      v-if="canImportIntoManagedLibrary"
+                      @click="handleImport"
+                      class="action-button import-button"
+                    >
+                      Import
+                    </button>
+                    <div class="export-dropdown-wrap" @click.stop>
+                      <button
+                        @click="toggleExportDropdown"
+                        :disabled="selectedCommandIds.length === 0"
+                        class="action-button export-button"
+                      >
+                        Export
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="m6 9 6 6 6-6"></path>
+                        </svg>
+                      </button>
+                      <div v-if="showExportDropdown" class="export-dropdown">
+                        <button class="export-dropdown-item" @click="handleExportBundle">
+                          As Bundle (.json)
+                        </button>
+                        <button class="export-dropdown-item" @click="handleExportAsLibrary">
+                          As Library (.zip)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="command-list-container">
+                <CommandList
+                  :commands="filteredManagementCommands"
+                  :selected-ids="selectedCommandIds"
+                  @toggle="toggleCommandSelection"
+                  :empty-message="managementEmptyMessage"
+                />
+              </div>
+            </div>
+
             <!-- Sync result notification -->
             <div v-if="syncMessage" class="sync-message" :class="syncMessageType">
               {{ syncMessage }}
             </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Command Management -->
-        <div v-if="activeTab === 'management'" class="management-tab">
-          <!-- Controls Section -->
-          <div class="management-controls">
-            <div class="controls-row">
-              <!-- Left: Selection + Filter -->
-              <div class="bulk-selection">
-                <input
-                  type="checkbox"
-                  class="select-all-checkbox"
-                  :checked="isAllSelected"
-                  :indeterminate="isIndeterminate"
-                  @change="toggleSelectAll"
-                />
-                <span class="selection-counter" :class="{ muted: selectedCommandIds.length === 0 }">
-                  {{ selectedCommandIds.length }} selected
-                </span>
-                <button @click.stop="toggleManagementFilterDropdown" :class="['management-filter-button', { active: selectedManagementTags.length > 0 }]" title="Filter by tags">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
-                  </svg>
-                </button>
-
-                <!-- Filter dropdown -->
-                <div v-if="showManagementFilterDropdown" class="filter-dropdown" @click.stop>
-                  <TagSelector
-                    :available-tags="availableTags"
-                    :selected-tags="selectedManagementTags"
-                    title="Filter by Tags"
-                    @toggle="toggleManagementTag"
-                    @clear-all="clearManagementTags"
-                  />
-                </div>
-              </div>
-
-              <div class="spacer"></div>
-
-              <!-- Right: Actions -->
-              <div class="action-buttons">
-                <button
-                  @click="handleBulkDelete"
-                  :disabled="selectedCommandIds.length === 0"
-                  class="action-button delete-icon-button"
-                  title="Delete selected"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  </svg>
-                </button>
-                <button
-                  @click="handleImport"
-                  class="action-button import-button"
-                >
-                  Import
-                </button>
-                <div class="export-dropdown-wrap" @click.stop>
-                  <button
-                    @click="toggleExportDropdown"
-                    :disabled="selectedCommandIds.length === 0"
-                    class="action-button export-button"
-                  >
-                    Export
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"></path>
-                    </svg>
-                  </button>
-                  <div v-if="showExportDropdown" class="export-dropdown">
-                    <button class="export-dropdown-item" @click="handleExportBundle">
-                      As Bundle (.json)
-                    </button>
-                    <button class="export-dropdown-item" @click="handleExportAsLibrary">
-                      As Library (.zip)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Command List -->
-          <div class="command-list-container">
-            <CommandList
-              :commands="filteredManagementCommands"
-              :selected-ids="selectedCommandIds"
-              @toggle="toggleCommandSelection"
-              :empty-message="managementEmptyMessage"
-            />
           </div>
         </div>
 
@@ -689,7 +720,6 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { Download, Upload } from 'lucide-vue-next'
 import { filterCommandsByTags, getAllTags, matchesTagFilter } from '../utils/tags'
 import { getInlineSuggestion } from '../utils/autocomplete'
 import { useSettings } from '../composables/useSettings'
@@ -710,6 +740,7 @@ interface Props {
     tagsNormalized: string[]
     language?: string
     source?: string
+    library_id?: number | null
     created_at: string
     updated_at: string
   }>
@@ -728,7 +759,7 @@ const emit = defineEmits<{
 }>()
 
 // Tab state
-type Tab = 'general' | 'connectors' | 'libraries' | 'management'
+type Tab = 'general' | 'connectors' | 'libraries'
 const activeTab = ref<Tab>('general')
 
 // ── Settings ───────────────────────────────────────────────────
@@ -1038,6 +1069,38 @@ const defaultWritableLibrary = computed(() => {
   if (libraryId === null) return null
   return libraries.value.find(lib => lib.id === libraryId && lib.type === 'local' && !!lib.manifest_path) || null
 })
+const selectedLibraryId = ref<number | null>(null)
+const managedLibrary = computed(() => {
+  if (selectedLibraryId.value === null) return null
+  return libraries.value.find(lib => lib.id === selectedLibraryId.value && !!lib.manifest_path) || null
+})
+const libraryCommandCounts = computed(() => {
+  const counts = new Map<number, number>()
+  for (const command of props.commands) {
+    if (!command.library_id) continue
+    counts.set(command.library_id, (counts.get(command.library_id) || 0) + 1)
+  }
+  return counts
+})
+const managedLibraryCommands = computed(() => {
+  if (!managedLibrary.value) return []
+  return props.commands.filter(command => command.library_id === managedLibrary.value?.id)
+})
+const managedAvailableTags = computed(() => getAllTags(managedLibraryCommands.value))
+const canDeleteManagedCommands = computed(() => managedLibrary.value?.type === 'local')
+const canImportIntoManagedLibrary = computed(() => {
+  return !!managedLibrary.value && managedLibrary.value.id === defaultWritableLibrary.value?.id
+})
+const managementContextNote = computed(() => {
+  if (!managedLibrary.value) return ''
+  if (canImportIntoManagedLibrary.value) {
+    return 'Imports and new commands land in this default writable library.'
+  }
+  if (managedLibrary.value.type === 'local') {
+    return 'This local library is readable here, but imports and new commands still target the default writable library.'
+  }
+  return 'This subscribed library is managed in context here. Export stays available, but destructive local delete is hidden.'
+})
 
 // ── Library Picker State ──────────────────────────────────────
 const libraryPicker = ref({
@@ -1104,6 +1167,26 @@ async function handleChooseDefaultWritableLibrary() {
   } finally {
     defaultLibraryPicking.value = false
   }
+}
+
+function openLibraryManagement(libraryId: number) {
+  selectedLibraryId.value = libraryId
+  selectedCommandIds.value = []
+  selectedManagementTags.value = []
+  showManagementFilterDropdown.value = false
+  showExportDropdown.value = false
+}
+
+function closeLibraryManagement() {
+  selectedLibraryId.value = null
+  selectedCommandIds.value = []
+  selectedManagementTags.value = []
+  showManagementFilterDropdown.value = false
+  showExportDropdown.value = false
+}
+
+function getLibraryCommandCount(libraryId: number): number {
+  return libraryCommandCounts.value.get(libraryId) || 0
 }
 
 // ── Auto-Sync State ───────────────────────────────────────────
@@ -1404,6 +1487,9 @@ async function loadAuthStatus() {
 async function loadLibraries() {
   try {
     libraries.value = await (window.electronAPI as any).library.getAll()
+    if (selectedLibraryId.value !== null && !libraries.value.some(lib => lib.id === selectedLibraryId.value && !!lib.manifest_path)) {
+      closeLibraryManagement()
+    }
   } catch {
     libraries.value = []
   }
@@ -1950,20 +2036,25 @@ const handleImport = () => {
 
 // Command Management - Filtered commands based on selected tags
 const filteredManagementCommands = computed(() => {
+  const baseCommands = managedLibraryCommands.value
+
   if (selectedManagementTags.value.length === 0) {
-    return props.commands
+    return baseCommands
   }
 
-  return props.commands.filter(command =>
+  return baseCommands.filter(command =>
     matchesTagFilter(command.tagsNormalized, selectedManagementTags.value)
   )
 })
 
 const managementEmptyMessage = computed(() => {
-  if (selectedManagementTags.value.length > 0) {
-    return 'No commands match the selected tags'
+  if (!managedLibrary.value) {
+    return 'Choose a library to manage its commands'
   }
-  return 'No commands available'
+  if (selectedManagementTags.value.length > 0) {
+    return 'No commands in this library match the selected tags'
+  }
+  return 'No commands in this library'
 })
 
 // Management filter dropdown
@@ -2054,6 +2145,13 @@ const handleExportAsLibrary = () => {
   showExportDropdown.value = false
   openExportLibraryModal()
 }
+
+watch(managedLibrary, (library) => {
+  if (!library) {
+    selectedCommandIds.value = []
+    selectedManagementTags.value = []
+  }
+})
 </script>
 
 <style scoped>
@@ -2384,15 +2482,6 @@ const handleExportAsLibrary = () => {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
-}
-
-/* Command Management Tab */
-.management-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  overflow: hidden;
 }
 
 .management-controls {
@@ -3088,6 +3177,12 @@ const handleExportAsLibrary = () => {
   color: #6ba3f7;
 }
 
+.library-role-badge.default {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 .toggle-switch {
   position: relative;
   width: 36px;
@@ -3485,6 +3580,28 @@ const handleExportAsLibrary = () => {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.library-info--interactive {
+  cursor: pointer;
+}
+
+.library-info--interactive:hover .library-name {
+  color: var(--accent-light);
+}
+
+.library-info--interactive:focus-visible {
+  outline: none;
+}
+
+.library-info--interactive:focus-visible .library-name {
+  color: var(--accent-light);
 }
 
 .library-name {
@@ -3504,6 +3621,11 @@ const handleExportAsLibrary = () => {
 
 .library-synced {
   color: var(--text-muted);
+  font-size: 11px;
+}
+
+.library-command-count {
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -3552,6 +3674,13 @@ const handleExportAsLibrary = () => {
   color: #fff;
 }
 
+.library-action-btn.manage {
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .library-action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -3572,6 +3701,71 @@ const handleExportAsLibrary = () => {
 
 .empty-libraries p {
   margin: 0 0 4px 0;
+}
+
+.library-management-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 460px;
+}
+
+.library-management-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.library-management-back {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.library-management-back:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.library-management-copy {
+  min-width: 0;
+}
+
+.library-management-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.library-management-title-row h4 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.library-management-path {
+  margin: 0 0 4px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.library-management-note {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 
 .sync-message {

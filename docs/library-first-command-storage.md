@@ -467,14 +467,21 @@ Completed on branch work by April 11, 2026:
 - Phase 3 baseline: local create/edit/delete now writes command JSON files when a writable local library exists, with DB fallback for legacy DB-only commands
 - Phase 4 baseline: initialized local libraries are reindexed from disk on startup so SQLite is refreshed as a derived cache/index
 - Phase 5 baseline: legacy DB-only local commands can be migrated into the default writable local library during startup
+- Phase 6 baseline: command management now opens from individual library cards instead of a global Settings tab
 - Phase 7 DB test recovery: `pnpm test:db` rebuilds `better-sqlite3` and reruns the SQLite test suite
 
 Still open after this session:
 
 - Phase 4 full SQLite demotion from command source of truth to cache/index beyond startup/local-library rebuild behavior
 - Phase 5 migration hardening beyond the current startup happy path
-- Phase 6 per-library command management UX
 - hardening around normalization and sync bookkeeping follow-up issues
+
+Issue #24 plan:
+
+- remove the global Manage Commands tab from Settings and make command management contextual to a selected library
+- allow initialized library cards to open a per-library detail surface directly from the Libraries tab
+- show command ownership clearly inside that per-library surface so users can see which library they are operating on
+- keep import/export/delete actions scoped to the active library where possible, while leaving global new-command creation pointed at the default writable local library
 
 ### Implementation Notes
 
@@ -485,12 +492,17 @@ Implemented and verified on April 11, 2026:
 - command JSON files now include a stable lowercase UUID `id`; edits preserve the existing file `id`
 - startup now migrates legacy DB-only commands into the default writable library when one exists, then reindexes initialized local libraries from disk
 - `electron/main/index.ts` and `electron/preload/index.ts` expose dedicated library-first CRUD and setup IPC channels
-- `src/components/SettingsModal.vue` exposes default writable library selection/change from Settings
+- `src/components/SettingsModal.vue` now removes the global Manage Commands tab, makes initialized library cards open a library-scoped management surface, and keeps destructive actions hidden for subscribed remote libraries
 - `docs/db-health.md` and `package.json` document and expose the DB recovery path via `pnpm test:db`
 
 Verification run on April 11, 2026:
 
 - `pnpm vue-tsc --noEmit`
-- `pnpm vitest run tests/local-library.test.ts`
-- `pnpm vitest run tests/database.test.ts`
+- `pnpm test`
 - `pnpm test:db`
+
+Issue #24 final notes:
+
+- Settings no longer has a global Manage Commands tab; command management now opens directly from initialized library cards in the Libraries tab.
+- The library list now shows command counts and default-library state so ownership is visible before opening the detail surface.
+- The per-library detail surface scopes filtering, selection, export, and deletion to the active library, while import remains available only for the default writable local library because that is still the app's authoring target.
