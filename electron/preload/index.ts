@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { Command, Library, SyncResult, AuthStatus, GitHubUser, BulkPublishResult, UpdateStatus, DiscoveredLibrary, DefaultWritableLibraryResult, DefaultWritableLibrarySetupResult, CommandMutationResult } from "../../shared/types"
+
+const subscribeToSignal = (channel: string, callback: () => void) => {
+  const listener = () => callback()
+  ipcRenderer.on(channel, listener)
+  return () => {
+    ipcRenderer.removeListener(channel, listener)
+  }
+}
 //expose db methods to renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // db methods
@@ -25,12 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('dialog:showInputDialog', title, label, defaultValue)
   },
   // window events
-  onWindowShown: (callback: () => void) => {
-    ipcRenderer.on('window-shown', callback)
-  },
+  onWindowShown: (callback: () => void) =>
+    subscribeToSignal('window-shown', callback),
   onCommandsChanged: (callback: () => void) => {
-    ipcRenderer.on('commands:changed', callback)
-    return () => { ipcRenderer.removeAllListeners('commands:changed') }
+    return subscribeToSignal('commands:changed', callback)
   },
   // file operations
   file: {
@@ -160,7 +166,7 @@ declare global {
       dialog: {
         showInputDialog: (title: string, label: string, defaultValue?: string) => Promise<{success: boolean, value: string | null}>
       },
-      onWindowShown: (callback: () => void) => void,
+      onWindowShown: (callback: () => void) => () => void,
       onCommandsChanged: (callback: () => void) => () => void,
       file: {
         saveDialog: (defaultFilename: string) => Promise<{success: boolean, filePath: string | null}>

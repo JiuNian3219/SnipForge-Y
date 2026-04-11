@@ -24,7 +24,7 @@ interface Window {
     dialog: {
       showInputDialog: (title: string, label: string, defaultValue?: string) => Promise<{ success: boolean; value: string | null }>
     }
-    onWindowShown: (callback: () => void) => void
+    onWindowShown: (callback: () => void) => () => void
     onCommandsChanged: (callback: () => void) => () => void
     file: {
       saveDialog: (defaultFilename: string) => Promise<{ success: boolean; filePath: string | null }>

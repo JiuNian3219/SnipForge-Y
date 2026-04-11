@@ -116,7 +116,20 @@ SnipForge/
 ```
 
 **Push from Main → Renderer:**
-- `window-shown` — fired when global hotkey shows window; App.vue resets search + focuses input
+- `window-shown` — fired when global hotkey shows window; `App.vue` resets search + focuses input via `onWindowShown()`, which now returns an unsubscribe cleanup for remount/HMR safety
+
+## Active Notes
+
+### Issue #35: `window-shown` listener cleanup
+
+Plan:
+- Update the preload bridge so `onWindowShown(callback)` returns an unsubscribe function instead of leaving cleanup to implicit process lifetime.
+- Update renderer typings and `App.vue` to consume that cleanup during unmount.
+- Add a small preload regression test so repeated mounts cannot silently accumulate stale listeners again.
+
+Final notes:
+- `window-shown` now matches the rest of the event-style preload APIs that expose explicit teardown.
+- `App.vue` unregisters both `window-shown` and `commands:changed` listeners on unmount instead of relying on process lifetime.
 
 ## IPC Channel Map
 
@@ -182,7 +195,7 @@ SnipForge/
 |---------|---------------|-------------|
 | `shell:openExternal` | `shell.openExternal()` | DescriptionModal link clicks |
 | `dialog:showInputDialog` | `dialog.showInputDialog()` | Available (superseded by VariableInputModal) |
-| `window-shown` *(push)* | `onWindowShown(cb)` | App.vue — resets UI on hotkey |
+| `window-shown` *(push)* | `onWindowShown(cb) => cleanup` | App.vue — resets UI on hotkey |
 
 ## Database Schema
 

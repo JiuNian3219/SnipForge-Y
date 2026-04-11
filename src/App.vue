@@ -245,6 +245,9 @@ const outsideClickHandler = (event: MouseEvent) => {
   }
 }
 
+let cleanupWindowShown: (() => void) | null = null
+let cleanupCommandsChanged: (() => void) | null = null
+
 onMounted(async () => {
   await loadCommands()
   await checkMaximizedState()
@@ -256,7 +259,7 @@ onMounted(async () => {
 
   // Listen for window-shown event from main process
   if (window.electronAPI) {
-    window.electronAPI.onWindowShown(() => {
+    cleanupWindowShown = window.electronAPI.onWindowShown(() => {
       // Clear search and focus input when window is shown via global hotkey
       searchQuery.value = '' // refDebounced will automatically clear debouncedSearchQuery
       selectedCommandId.value = null
@@ -272,7 +275,7 @@ onMounted(async () => {
     })
 
     // Reload commands when file watcher detects library changes
-    window.electronAPI.onCommandsChanged(() => {
+    cleanupCommandsChanged = window.electronAPI.onCommandsChanged(() => {
       loadCommands()
     })
   }
@@ -284,6 +287,8 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyboard)
   document.removeEventListener('mousedown', outsideClickHandler, true)
+  if (cleanupWindowShown) cleanupWindowShown()
+  if (cleanupCommandsChanged) cleanupCommandsChanged()
   if (notificationTimeout) clearTimeout(notificationTimeout)
 })
 // Two-stage filtering: tags first, then fuzzy search
