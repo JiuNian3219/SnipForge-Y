@@ -40,6 +40,7 @@ export interface Library {
 }
 
 export interface RemoteCommand {
+  id?: string
   title: string
   body: string
   description: string
@@ -117,5 +118,13 @@ export interface DefaultWritableLibrarySetupResult {
   library?: Library
   syncResult?: SyncResult
   cancelled?: boolean
+  error?: string
+}
+
+export interface CommandMutationResult {
+  success: boolean
+  mode?: 'library' | 'database'
+  library?: Library
+  syncResult?: SyncResult
   error?: string
 }
