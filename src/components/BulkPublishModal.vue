@@ -125,6 +125,7 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import type { Library, CommandWithTags, BulkPublishResult } from '../../shared/types'
 import CommandList from './CommandList.vue'
 import TagSelector from './TagSelector.vue'
+import { matchesTagFilter } from '../utils/tags'
 
 interface Props {
   show: boolean
@@ -167,16 +168,12 @@ const availableTags = computed(() => {
   return Array.from(tags).sort()
 })
 
-// Filtered by selected tags (OR logic, matching Manage Commands)
+// Filtered by selected tags, matching browse/manage/export semantics
 const filteredLocalCommands = computed(() => {
   if (selectedFilterTags.value.length === 0) return localCommands.value
 
   return localCommands.value.filter(cmd =>
-    selectedFilterTags.value.some(selectedTag =>
-      cmd.tagsNormalized.some(cmdTag =>
-        cmdTag.includes(selectedTag.toLowerCase())
-      )
-    )
+    matchesTagFilter(cmd.tagsNormalized, selectedFilterTags.value)
   )
 })
 

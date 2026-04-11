@@ -125,6 +125,29 @@ Unblocks parked ideas (tag pills, preview on copy). All in the General tab.
 - `src/App.vue` — tag pills rendering (`.tag-pill`), preview on copy toast, `matchAction()` + `matchesShortcut()` replace hardcoded key checks in `handleKeyboard`
 - `src/components/SettingsModal.vue` — Display section (toggle switches), Keyboard Shortcuts section (shortcut table with click-to-rebind, conflict detection, reset)
 
+### Post-Phase Hardening
+
+#### Tag Filter Semantics In Manage Commands And Export (issue [#32](https://github.com/ArtluxDM/SnipForge/issues/32)) - Complete
+
+Problem:
+The app currently uses different tag-filter semantics depending on where the user is looking. Browse and management flows use OR-style matching, while export filtering still runs through shared AND-style filtering. The export count preview in Settings also follows the old AND rule, so the UI can promise one result set and export another.
+
+Delivered:
+- [x] Defined one semantic for multi-tag selection in browse/manage/export flows: OR semantics with exact normalized tag matches
+- [x] Routed browse/manage/export matching through shared tag-filter utilities instead of duplicating ad hoc checks
+- [x] Updated tests so filtered export behavior is locked to the chosen rule
+- [x] Logged the final behavior here after implementation
+
+Implementation notes:
+- `src/utils/tags.ts` now owns the shared multi-tag rule through `matchesTagFilter()` and `filterCommandsByTags()`
+- `src/App.vue`, `src/components/SettingsModal.vue`, and `src/components/BulkPublishModal.vue` now all use the same matching path
+- Matching was tightened to exact normalized tags rather than substring contains, so selecting `docker` no longer silently matches `docker-compose`
+- The Manage Commands export count now uses the same shared filter as the export itself, removing preview/export drift
+
+Verification:
+- `pnpm exec vue-tsc --noEmit`
+- `pnpm test`
+
 ---
 
 ## Design Decisions

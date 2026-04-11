@@ -87,6 +87,32 @@ export function getAllTags(commands: Array<{ tags: string }>): string[] {
 }
 
 /**
+ * Checks whether a command's tags match a selected multi-tag filter.
+ *
+ * Multi-select tag filters use OR semantics in browse/manage/export flows:
+ * selecting more tags should broaden the result set, not narrow it.
+ *
+ * @param commandTags - Tags already associated with the command
+ * @param filterTags - Array of tags to filter by (if empty, returns all commands)
+ * @returns True when the command has at least one selected tag
+ */
+export function matchesTagFilter(
+  commandTags: string[],
+  filterTags: string[]
+): boolean {
+  if (filterTags.length === 0) {
+    return true
+  }
+
+  const normalizedFilterTags = normalizeTags(filterTags)
+  const normalizedCommandTags = normalizeTags(commandTags)
+
+  return normalizedFilterTags.some(filterTag =>
+    normalizedCommandTags.includes(filterTag)
+  )
+}
+
+/**
  * Filters commands by tags (case-insensitive)
  *
  * @param commands - Array of commands to filter
@@ -109,9 +135,7 @@ export function filterCommandsByTags<T extends { tags: string }>(
 
   return commands.filter(command => {
     const commandTags = parseTagsFromJson(command.tags)
-    return normalizedFilterTags.every(filterTag =>
-      commandTags.includes(filterTag)
-    )
+    return matchesTagFilter(commandTags, normalizedFilterTags)
   })
 }
 

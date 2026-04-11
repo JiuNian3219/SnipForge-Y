@@ -64,6 +64,30 @@ describe('exportCommands', () => {
 
         expect(exportData.filter_tags).toEqual(['docker', 'logs'])
     })
+
+    it('uses OR semantics for multi-tag export filters to match browse and management', () => {
+        const exportData = exportCommands([
+            makeCommand(),
+            makeCommand({
+                id: 2,
+                title: 'K8s Pods',
+                body: 'kubectl get pods',
+                tags: '["k8s"]',
+            }),
+            makeCommand({
+                id: 3,
+                title: 'Docker Compose Logs',
+                body: 'docker compose logs web',
+                tags: '["docker", "compose"]',
+            }),
+        ], ['docker', 'k8s'])
+
+        expect(exportData.commands.map(command => command.title)).toEqual([
+            'Docker Logs',
+            'K8s Pods',
+            'Docker Compose Logs',
+        ])
+    })
 })
 
 describe('generateExportFilename', () => {

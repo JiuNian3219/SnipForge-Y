@@ -687,7 +687,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { Download, Upload } from 'lucide-vue-next'
-import { getAllTags } from '../utils/tags'
+import { filterCommandsByTags, getAllTags, matchesTagFilter } from '../utils/tags'
 import { getInlineSuggestion } from '../utils/autocomplete'
 import { useSettings } from '../composables/useSettings'
 import CommandList from './CommandList.vue'
@@ -1754,21 +1754,7 @@ const exportCommandCount = computed(() => {
     return props.commands.length
   }
 
-  // Count commands that match ALL filter tags (AND logic)
-  return props.commands.filter(command => {
-    try {
-      const commandTags = JSON.parse(command.tags) as string[]
-      const normalizedCommandTags = commandTags.map(tag => tag.toLowerCase())
-
-      return filterTags.every(filterTag =>
-        normalizedCommandTags.some(commandTag =>
-          commandTag.includes(filterTag)
-        )
-      )
-    } catch {
-      return false
-    }
-  }).length
+  return filterCommandsByTags(props.commands, filterTags).length
 })
 
 // Computed statistics
@@ -1941,21 +1927,15 @@ const handleImport = () => {
   emit('import')
 }
 
-// Command Management - Filtered commands based on selected tags (OR logic)
+// Command Management - Filtered commands based on selected tags
 const filteredManagementCommands = computed(() => {
   if (selectedManagementTags.value.length === 0) {
     return props.commands
   }
 
-  return props.commands.filter(command => {
-    // Use pre-normalized tags for performance (from optimization)
-    // OR logic: command matches if it has ANY of the selected tags
-    return selectedManagementTags.value.some(selectedTag =>
-      command.tagsNormalized.some(commandTag =>
-        commandTag.includes(selectedTag.toLowerCase())
-      )
-    )
-  })
+  return props.commands.filter(command =>
+    matchesTagFilter(command.tagsNormalized, selectedManagementTags.value)
+  )
 })
 
 const managementEmptyMessage = computed(() => {

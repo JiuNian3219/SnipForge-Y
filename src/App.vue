@@ -17,7 +17,7 @@ import { extractVariables, substituteVariables, hasVariables, highlightVariables
 import { useSettings } from './composables/useSettings'
 import { exportCommands, importCommands, validateExportData, generateExportFilename, detectDuplicates, type DuplicateMatch, type ImportCommand } from './utils/importExport'
 import { fuzzySearchCommands } from './utils/fuzzySearch'
-import { getAllTags } from './utils/tags'
+import { getAllTags, matchesTagFilter } from './utils/tags'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
@@ -292,15 +292,9 @@ const filteredCommands = computed(() => {
 
   // Stage 1: Filter by selected tags (if any)
   if (selectedTags.value.length > 0) {
-    dataset = dataset.filter(command => {
-      // Use pre-normalized tags for performance (avoid runtime toLowerCase)
-      // Command must have ANY selected tag (OR logic - more tags = more results)
-      return selectedTags.value.some(selectedTag =>
-        command.tagsNormalized.some(commandTag =>
-          commandTag.includes(selectedTag.toLowerCase())
-        )
-      )
-    })
+    dataset = dataset.filter(command =>
+      matchesTagFilter(command.tagsNormalized, selectedTags.value)
+    )
   }
 
   // Stage 2: Fuzzy search within filtered dataset
