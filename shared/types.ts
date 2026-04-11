@@ -40,6 +40,7 @@ export interface Library {
 }
 
 export interface RemoteCommand {
+  id?: string
   title: string
   body: string
   description: string

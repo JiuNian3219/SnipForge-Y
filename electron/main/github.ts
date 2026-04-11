@@ -907,6 +907,16 @@ function slugify(title: string): string {
         || 'untitled'
 }
 
+function createCommandId(): string {
+    return crypto.randomUUID().toLowerCase()
+}
+
+function normalizeCommandId(value: unknown): string | null {
+    return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value)
+        ? value.toLowerCase()
+        : null
+}
+
 export async function publishCommand(
     libraryId: number,
     command: { title: string; body: string; description: string; tags: string[]; language: string }
@@ -930,6 +940,7 @@ export async function publishCommand(
     const now = new Date().toISOString()
     const commandJson = {
         snipforge: 'command' as const,
+        id: createCommandId(),
         title: command.title,
         body: command.body,
         description: command.description || '',
@@ -950,6 +961,10 @@ export async function publishCommand(
         try {
             const existingContent = Buffer.from(existing.content, 'base64').toString('utf8')
             const existingCommand = JSON.parse(existingContent)
+            const existingId = normalizeCommandId(existingCommand.id)
+            if (existingId) {
+                commandJson.id = existingId
+            }
             if (existingCommand.created_at) {
                 commandJson.created_at = existingCommand.created_at
             }

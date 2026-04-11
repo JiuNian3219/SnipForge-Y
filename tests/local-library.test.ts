@@ -195,7 +195,7 @@ describe('scanLocalFolder', () => {
 })
 
 describe('local library CRUD', () => {
-    it('writes created commands to disk, then updates and deletes the same file', async () => {
+    it('writes created commands to disk with a stable id, then updates and deletes the same file', async () => {
         const setup = await setupDefaultWritableLocalLibrary(tmpDir)
         const createResult = await createLocalLibraryCommand({
             title: 'Git Commit',
@@ -215,6 +215,7 @@ describe('local library CRUD', () => {
         const commandPath = createdCommands[0].remote_path as string
         const createdFile = JSON.parse(await fs.readFile(path.join(tmpDir, commandPath), 'utf8'))
         expect(createdFile.snipforge).toBe('command')
+        expect(createdFile.id).toMatch(/^[0-9a-f-]{36}$/)
         expect(createdFile.title).toBe('Git Commit')
         expect(createdFile.tags).toEqual(['git', 'commit'])
 
@@ -230,6 +231,7 @@ describe('local library CRUD', () => {
         expect(updateResult.mode).toBe('library')
 
         const updatedFile = JSON.parse(await fs.readFile(path.join(tmpDir, commandPath), 'utf8'))
+        expect(updatedFile.id).toBe(createdFile.id)
         expect(updatedFile.title).toBe('Git Commit Updated')
         expect(updatedFile.body).toBe('git commit --amend')
 

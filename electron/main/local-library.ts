@@ -67,8 +67,19 @@ function parseTags(tags: string): string[] {
     }
 }
 
-function buildCommandFileData(command: CommandFormData, createdAt: string): {
+function normalizeCommandId(value: unknown): string | null {
+    return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value)
+        ? value.toLowerCase()
+        : null
+}
+
+function createCommandId(): string {
+    return crypto.randomUUID().toLowerCase()
+}
+
+function buildCommandFileData(command: CommandFormData, createdAt: string, id: string): {
     snipforge: 'command'
+    id: string
     title: string
     body: string
     description: string
@@ -80,6 +91,7 @@ function buildCommandFileData(command: CommandFormData, createdAt: string): {
     const now = new Date().toISOString()
     return {
         snipforge: 'command',
+        id,
         title: command.title.trim(),
         body: command.body.trim(),
         description: command.description || '',
@@ -90,8 +102,8 @@ function buildCommandFileData(command: CommandFormData, createdAt: string): {
     }
 }
 
-async function writeCommandFile(folderPath: string, fileName: string, command: CommandFormData, createdAt: string): Promise<void> {
-    const fileData = buildCommandFileData(command, createdAt)
+async function writeCommandFile(folderPath: string, fileName: string, command: CommandFormData, createdAt: string, id: string): Promise<void> {
+    const fileData = buildCommandFileData(command, createdAt, id)
     await fs.writeFile(
         path.join(folderPath, fileName),
         JSON.stringify(fileData, null, 2) + '\n',
@@ -248,7 +260,7 @@ export async function createLocalLibraryCommand(command: CommandFormData): Promi
 
     const fileName = await findUniqueCommandFileName(library.github_repo, command.title)
     const createdAt = new Date().toISOString()
-    await writeCommandFile(library.github_repo, fileName, command, createdAt)
+    await writeCommandFile(library.github_repo, fileName, command, createdAt, createCommandId())
 
     const syncResult = await syncLocalLibrary(library.id, true)
     const updatedLibrary = db.getAllLibraries().find(l => l.id === library.id) || library
@@ -270,6 +282,7 @@ export async function updateLocalLibraryCommand(commandId: number, updates: Comm
 
     const filePath = path.join(target.library.github_repo, target.command.remote_path)
     const existing = await fs.readFile(filePath, 'utf8').then(content => JSON.parse(content) as {
+        id?: string
         created_at?: string
     }).catch(() => null)
 
@@ -277,7 +290,13 @@ export async function updateLocalLibraryCommand(commandId: number, updates: Comm
         throw new Error('Command file not found')
     }
 
-    await writeCommandFile(target.library.github_repo, target.command.remote_path, updates, existing.created_at || target.command.created_at)
+    await writeCommandFile(
+        target.library.github_repo,
+        target.command.remote_path,
+        updates,
+        existing.created_at || target.command.created_at,
+        normalizeCommandId(existing.id) || createCommandId()
+    )
     const syncResult = await syncLocalLibrary(target.library.id, true)
     const updatedLibrary = db.getAllLibraries().find(l => l.id === target.library.id) || target.library
     return { success: true, mode: 'library', library: updatedLibrary, syncResult }
@@ -341,6 +360,7 @@ export async function scanLocalFolder(folderPath: string): Promise<ScanResult> {
                 typeof parsed.body === 'string' && parsed.body.trim()
             ) {
                 const command: RemoteCommand = {
+                    id: normalizeCommandId(parsed.id) || undefined,
                     title: parsed.title,
                     body: parsed.body,
                     description: parsed.description || '',
@@ -640,6 +660,7 @@ async function readCommandFile(filePath: string): Promise<RemoteCommand | null> 
             typeof parsed.body === 'string' && parsed.body.trim()
         ) {
             return {
+                id: normalizeCommandId(parsed.id) || undefined,
                 title: parsed.title,
                 body: parsed.body,
                 description: parsed.description || '',
