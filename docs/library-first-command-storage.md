@@ -431,4 +431,38 @@ Do not implement this as a dual-source-of-truth system. During rollout, temporar
 
 ### Status
 
-Planned. No implementation work has started under this doc yet.
+In progress.
+
+Completed on branch work by April 11, 2026:
+
+- Phase 2 baseline: first-run default writable local library setup, manifest bootstrap, stored default library preference
+- Phase 3 baseline: local create/edit/delete now writes command JSON files when a writable local library exists, with DB fallback for legacy DB-only commands
+- Phase 4 baseline: initialized local libraries are reindexed from disk on startup so SQLite is refreshed as a derived cache/index
+- Phase 5 baseline: legacy DB-only local commands can be migrated into the default writable local library during startup
+- Phase 7 DB test recovery: `pnpm test:db` rebuilds `better-sqlite3` and reruns the SQLite test suite
+
+Still open after this session:
+
+- Phase 4 full SQLite demotion from command source of truth to cache/index beyond startup/local-library rebuild behavior
+- Phase 5 migration hardening beyond the current startup happy path
+- Phase 6 per-library command management UX
+- hardening around normalization and sync bookkeeping follow-up issues
+
+### Implementation Notes
+
+Implemented and verified on April 11, 2026:
+
+- new first-run gate in `src/App.vue` blocks command authoring until a default writable local library exists
+- `electron/main/local-library.ts` now owns default writable library resolution, manifest bootstrap, local file-backed CRUD, and legacy DB fallback
+- command JSON files now include a stable lowercase UUID `id`; edits preserve the existing file `id`
+- startup now migrates legacy DB-only commands into the default writable library when one exists, then reindexes initialized local libraries from disk
+- `electron/main/index.ts` and `electron/preload/index.ts` expose dedicated library-first CRUD and setup IPC channels
+- `src/components/SettingsModal.vue` exposes default writable library selection/change from Settings
+- `docs/db-health.md` and `package.json` document and expose the DB recovery path via `pnpm test:db`
+
+Verification run on April 11, 2026:
+
+- `pnpm vue-tsc --noEmit`
+- `pnpm vitest run tests/local-library.test.ts`
+- `pnpm vitest run tests/database.test.ts`
+- `pnpm test:db`
