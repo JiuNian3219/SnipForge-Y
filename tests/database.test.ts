@@ -37,6 +37,64 @@ describe('addCommand', () => {
         expect(all[0].title).toBe('Test Command')
         expect(all[0].body).toBe('echo hello')
     })
+
+    it('inserts multiple commands in one transaction', () => {
+        const inserted = db.addCommands([
+            {
+                title: 'One',
+                body: 'echo one',
+                description: '',
+                tags: '["test"]',
+                language: 'bash',
+                source: 'local',
+                library_id: null,
+                remote_path: null,
+            },
+            {
+                title: 'Two',
+                body: 'echo two',
+                description: 'second',
+                tags: '[]',
+                language: 'bash',
+                source: 'local',
+                library_id: null,
+                remote_path: null,
+            }
+        ])
+
+        expect(inserted).toBe(2)
+        expect(db.getAllCommands()).toHaveLength(2)
+    })
+})
+
+describe('deleteCommandsByIds', () => {
+    it('deletes multiple commands in one transaction', () => {
+        const firstId = db.addCommand({
+            title: 'First',
+            body: 'echo first',
+            description: '',
+            tags: '[]',
+            language: 'bash',
+            source: 'local',
+            library_id: null,
+            remote_path: null,
+        })
+        const secondId = db.addCommand({
+            title: 'Second',
+            body: 'echo second',
+            description: '',
+            tags: '[]',
+            language: 'bash',
+            source: 'local',
+            library_id: null,
+            remote_path: null,
+        })
+
+        const deleted = db.deleteCommandsByIds([firstId, secondId])
+
+        expect(deleted).toBe(2)
+        expect(db.getAllCommands()).toHaveLength(0)
+    })
 })
 
 // ── syncRemoteCommands ──────────────────────────────────────────

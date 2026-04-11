@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import AdmZip from 'adm-zip'
 import * as db from './database'
 import * as settings from './settings'
-import type { CommandMutationResult, DiscoveredLibrary, Library, LibraryManifest, RemoteCommand, SyncResult } from '../../shared/types'
+import type { BatchCommandMutationResult, CommandMutationResult, DiscoveredLibrary, Library, LibraryManifest, RemoteCommand, SyncResult } from '../../shared/types'
 
 // ── Local Folder Scanning ────────────────────────────────────────
 
@@ -328,6 +328,75 @@ export async function createLocalLibraryCommand(command: CommandFormData): Promi
     return { success: true, mode: 'library', library: updatedLibrary, syncResult }
 }
 
+export async function createLocalLibraryCommands(commands: CommandFormData[]): Promise<BatchCommandMutationResult> {
+    if (commands.length === 0) {
+        return { success: true, mode: 'database', processed: 0, succeeded: 0, failed: 0, errors: [] }
+    }
+
+    const library = getDefaultWritableLocalLibrary()
+    if (!library) {
+        db.addCommands(commands.map(command => ({
+            title: command.title,
+            body: command.body,
+            description: command.description,
+            tags: command.tags,
+            language: command.language,
+            source: 'local',
+            library_id: null,
+            remote_path: null,
+        })))
+
+        return {
+            success: true,
+            mode: 'database',
+            processed: commands.length,
+            succeeded: commands.length,
+            failed: 0,
+            errors: [],
+        }
+    }
+
+    const errors: string[] = []
+    let succeeded = 0
+
+    for (const command of commands) {
+        try {
+            const fileName = await findUniqueCommandFileName(library.github_repo, command.title)
+            const createdAt = new Date().toISOString()
+            await writeCommandFile(library.github_repo, fileName, command, createdAt, createCommandId())
+            succeeded += 1
+        } catch (error) {
+            errors.push(`Failed to create "${command.title}": ${(error as Error).message}`)
+        }
+    }
+
+    const updatedLibrary = db.getAllLibraries().find(l => l.id === library.id) || library
+    if (succeeded === 0) {
+        return {
+            success: false,
+            mode: 'library',
+            processed: commands.length,
+            succeeded: 0,
+            failed: commands.length,
+            errors,
+            libraries: [updatedLibrary],
+        }
+    }
+
+    const syncResult = await syncLocalLibrary(library.id, true)
+    errors.push(...syncResult.errors)
+
+    return {
+        success: errors.length === 0,
+        mode: 'library',
+        processed: commands.length,
+        succeeded,
+        failed: commands.length - succeeded,
+        errors,
+        libraries: [db.getAllLibraries().find(l => l.id === library.id) || updatedLibrary],
+    }
+}
+
 export async function updateLocalLibraryCommand(commandId: number, updates: CommandFormData): Promise<CommandMutationResult> {
     const target = resolveFileBackedLocalCommand(commandId)
     if (!target) {
@@ -375,6 +444,78 @@ export async function deleteLocalLibraryCommand(commandId: number): Promise<Comm
     const syncResult = await syncLocalLibrary(target.library.id, true)
     const updatedLibrary = db.getAllLibraries().find(l => l.id === target.library.id) || target.library
     return { success: true, mode: 'library', library: updatedLibrary, syncResult }
+}
+
+export async function deleteLocalLibraryCommands(commandIds: number[]): Promise<BatchCommandMutationResult> {
+    if (commandIds.length === 0) {
+        return { success: true, mode: 'database', processed: 0, succeeded: 0, failed: 0, errors: [] }
+    }
+
+    const errors: string[] = []
+    const libraryIds = new Set<number>()
+    const fileDeletesByLibrary = new Map<number, string[]>()
+    const databaseIds: number[] = []
+
+    for (const commandId of commandIds) {
+        const target = resolveFileBackedLocalCommand(commandId)
+        if (!target) {
+            databaseIds.push(commandId)
+            continue
+        }
+
+        libraryIds.add(target.library.id)
+        const deletions = fileDeletesByLibrary.get(target.library.id) || []
+        deletions.push(path.join(target.library.github_repo, target.command.remote_path as string))
+        fileDeletesByLibrary.set(target.library.id, deletions)
+    }
+
+    let succeeded = 0
+
+    if (databaseIds.length > 0) {
+        const deleted = db.deleteCommandsByIds(databaseIds)
+        succeeded += deleted
+        if (deleted !== databaseIds.length) {
+            errors.push(`Failed to delete ${databaseIds.length - deleted} database-backed command(s)`)
+        }
+    }
+
+    for (const [libraryId, filePaths] of fileDeletesByLibrary.entries()) {
+        for (const filePath of filePaths) {
+            try {
+                await fs.rm(filePath, { force: true })
+                succeeded += 1
+            } catch (error) {
+                errors.push(`Failed to delete "${path.basename(filePath)}": ${(error as Error).message}`)
+            }
+        }
+
+        try {
+            const syncResult = await syncLocalLibrary(libraryId, true)
+            errors.push(...syncResult.errors)
+        } catch (error) {
+            errors.push(`Failed to sync local library ${libraryId}: ${(error as Error).message}`)
+        }
+    }
+
+    const libraries = [...libraryIds]
+        .map(libraryId => db.getAllLibraries().find(library => library.id === libraryId))
+        .filter((library): library is Library => !!library)
+
+    const mode = databaseIds.length > 0 && fileDeletesByLibrary.size > 0
+        ? 'mixed'
+        : fileDeletesByLibrary.size > 0
+            ? 'library'
+            : 'database'
+
+    return {
+        success: succeeded > 0 && errors.length === 0,
+        mode,
+        processed: commandIds.length,
+        succeeded,
+        failed: commandIds.length - succeeded,
+        errors,
+        libraries,
+    }
 }
 
 export async function scanLocalFolder(folderPath: string): Promise<ScanResult> {

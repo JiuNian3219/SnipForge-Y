@@ -64,8 +64,10 @@ interface Window {
       getDefaultWritableLocalLibrary: () => Promise<{ success: boolean; library: any | null; error?: string }>
       setupDefaultWritableLocalLibrary: () => Promise<{ success: boolean; library?: any; syncResult?: any; cancelled?: boolean; error?: string }>
       createCommand: (command: { title: string; body: string; description: string; tags: string; language: string }) => Promise<import('../shared/types').CommandMutationResult>
+      createCommands: (commands: Array<{ title: string; body: string; description: string; tags: string; language: string }>) => Promise<import('../shared/types').BatchCommandMutationResult>
       updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => Promise<import('../shared/types').CommandMutationResult>
       deleteCommand: (id: number) => Promise<import('../shared/types').CommandMutationResult>
+      deleteCommands: (ids: number[]) => Promise<import('../shared/types').BatchCommandMutationResult>
       browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
       openLocal: () => Promise<{ success: boolean; library?: any; syncResult?: any; error?: string }>
       init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: any; syncResult?: any; error?: string }>

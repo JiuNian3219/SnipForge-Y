@@ -422,6 +422,16 @@ function isValidCommandUpdate(obj: unknown): obj is Partial<db.Command> {
   return true
 }
 
+function isValidCommandBatch(value: unknown): value is Array<{ title: string; body: string; description: string; tags: string; language: string }> {
+  return Array.isArray(value) && value.every(command =>
+    isValidCommandUpdate(command) &&
+    typeof command.title === 'string' &&
+    typeof command.body === 'string' &&
+    command.title.trim().length > 0 &&
+    command.body.trim().length > 0
+  )
+}
+
 // IPC handlers for database operations
 ipcMain.handle('db:getAllCommands', async () => {
   try {
@@ -986,6 +996,18 @@ ipcMain.handle('library:createCommand', async (_, command: { title: string; body
   }
 })
 
+ipcMain.handle('library:createCommands', async (_, commands: Array<{ title: string; body: string; description: string; tags: string; language: string }>) => {
+  if (!isValidCommandBatch(commands)) {
+    return { success: false, processed: 0, succeeded: 0, failed: 0, errors: ['Invalid command data'] }
+  }
+  try {
+    return await localLibrary.createLocalLibraryCommands(commands)
+  } catch (error) {
+    console.error('Library createCommands error:', error)
+    return { success: false, processed: commands.length, succeeded: 0, failed: commands.length, errors: [(error as Error).message] }
+  }
+})
+
 ipcMain.handle('library:updateCommand', async (_, id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => {
   if (
     typeof id !== 'number' ||
@@ -1012,6 +1034,18 @@ ipcMain.handle('library:deleteCommand', async (_, id: number) => {
   } catch (error) {
     console.error('Library deleteCommand error:', error)
     return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('library:deleteCommands', async (_, ids: number[]) => {
+  if (!Array.isArray(ids) || ids.some(id => typeof id !== 'number')) {
+    return { success: false, processed: 0, succeeded: 0, failed: 0, errors: ['Invalid command IDs'] }
+  }
+  try {
+    return await localLibrary.deleteLocalLibraryCommands(ids)
+  } catch (error) {
+    console.error('Library deleteCommands error:', error)
+    return { success: false, processed: ids.length, succeeded: 0, failed: ids.length, errors: [(error as Error).message] }
   }
 })
 

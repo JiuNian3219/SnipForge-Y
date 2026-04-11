@@ -128,3 +128,13 @@ export interface CommandMutationResult {
   syncResult?: SyncResult
   error?: string
 }
+
+export interface BatchCommandMutationResult {
+  success: boolean
+  mode?: 'library' | 'database' | 'mixed'
+  processed: number
+  succeeded: number
+  failed: number
+  errors: string[]
+  libraries?: Library[]
+}

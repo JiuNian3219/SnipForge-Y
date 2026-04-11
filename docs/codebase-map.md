@@ -120,16 +120,17 @@ SnipForge/
 
 ## Active Notes
 
-### Issue #35: `window-shown` listener cleanup
+### Issue #34: batch IPC for import and bulk delete
 
 Plan:
-- Update the preload bridge so `onWindowShown(callback)` returns an unsubscribe function instead of leaving cleanup to implicit process lifetime.
-- Update renderer typings and `App.vue` to consume that cleanup during unmount.
-- Add a small preload regression test so repeated mounts cannot silently accumulate stale listeners again.
+- Add batch command mutation APIs so import and bulk delete stop doing one renderer-to-main round trip per command.
+- Use transactions for DB-backed command batches and a single library sync for file-backed local-library batches.
+- Update the preload typings, renderer flows, and regression coverage so success/failure accounting stays explicit.
 
 Final notes:
-- `window-shown` now matches the rest of the event-style preload APIs that expose explicit teardown.
-- `App.vue` unregisters both `window-shown` and `commands:changed` listeners on unmount instead of relying on process lifetime.
+- Import replacement and bulk delete now use `library:createCommands` and `library:deleteCommands` instead of per-command IPC loops.
+- DB-backed batches run inside SQLite transactions, while local-library batches collapse to one sync pass per touched library.
+- Regression coverage now includes batch DB inserts/deletes and local-library batch create/delete flows.
 
 ## IPC Channel Map
 
@@ -187,6 +188,8 @@ Final notes:
 | `library:sync` | `library.sync()` | SettingsModal |
 | `library:syncAll` | `library.syncAll()` | SettingsModal |
 | `library:getAll` | `library.getAll()` | SettingsModal on open |
+| `library:createCommands` | `library.createCommands(commands)` | App.vue import flow |
+| `library:deleteCommands` | `library.deleteCommands(ids)` | App.vue bulk delete + import replacement |
 | `library:browse` | `library.browse()` | SettingsModal preview |
 
 ### Other

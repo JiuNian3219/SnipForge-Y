@@ -5,7 +5,9 @@ import { promises as fs } from 'node:fs'
 import * as db from '../electron/main/database'
 import * as settings from '../electron/main/settings'
 import {
+    createLocalLibraryCommands,
     createLocalLibraryCommand,
+    deleteLocalLibraryCommands,
     deleteLocalLibraryCommand,
     migrateLegacyDbOnlyCommandsToDefaultLibrary,
     openLocalFolder,
@@ -317,6 +319,37 @@ describe('local library CRUD', () => {
         expect(db.getRemoteCommands(setup.library.id)).toHaveLength(0)
     })
 
+    it('batches command creation into a single local-library sync', async () => {
+        const setup = await setupDefaultWritableLocalLibrary(tmpDir)
+
+        const result = await createLocalLibraryCommands([
+            {
+                title: 'Git Status',
+                body: 'git status',
+                description: 'Check repo state',
+                tags: '["git"]',
+                language: 'bash',
+            },
+            {
+                title: 'Git Pull',
+                body: 'git pull',
+                description: 'Update local branch',
+                tags: '["git"]',
+                language: 'bash',
+            }
+        ])
+
+        expect(result.success).toBe(true)
+        expect(result.mode).toBe('library')
+        expect(result.processed).toBe(2)
+        expect(result.succeeded).toBe(2)
+        expect(result.failed).toBe(0)
+
+        const commands = db.getRemoteCommands(setup.library.id)
+        expect(commands).toHaveLength(2)
+        expect(commands.map(command => command.title).sort()).toEqual(['Git Pull', 'Git Status'])
+    })
+
     it('falls back to database CRUD for legacy DB-only commands', async () => {
         const commandId = db.addCommand({
             title: 'Legacy Command',
@@ -344,6 +377,37 @@ describe('local library CRUD', () => {
         const deleteResult = await deleteLocalLibraryCommand(commandId)
         expect(deleteResult.success).toBe(true)
         expect(deleteResult.mode).toBe('database')
+        expect(db.getAllCommands()).toHaveLength(0)
+    })
+
+    it('batches deletion for legacy DB-only commands', async () => {
+        const firstId = db.addCommand({
+            title: 'Legacy One',
+            body: 'echo one',
+            description: '',
+            tags: '[]',
+            language: 'bash',
+            source: 'local',
+            library_id: null,
+            remote_path: null,
+        })
+        const secondId = db.addCommand({
+            title: 'Legacy Two',
+            body: 'echo two',
+            description: '',
+            tags: '[]',
+            language: 'bash',
+            source: 'local',
+            library_id: null,
+            remote_path: null,
+        })
+
+        const result = await deleteLocalLibraryCommands([firstId, secondId])
+
+        expect(result.success).toBe(true)
+        expect(result.mode).toBe('database')
+        expect(result.succeeded).toBe(2)
+        expect(result.failed).toBe(0)
         expect(db.getAllCommands()).toHaveLength(0)
     })
 

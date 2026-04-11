@@ -634,8 +634,9 @@ const processImport = async (commandsToAdd: ImportCommand[], idsToReplace: numbe
   try {
     // Delete existing commands if replacing
     if (idsToReplace.length > 0) {
-      for (const id of idsToReplace) {
-        await window.electronAPI.library.deleteCommand(id)
+      const deleteResult = await window.electronAPI.library.deleteCommands(idsToReplace)
+      if (deleteResult.failed > 0) {
+        console.error('Failed to replace some existing commands:', deleteResult.errors)
       }
     }
 
@@ -643,18 +644,12 @@ const processImport = async (commandsToAdd: ImportCommand[], idsToReplace: numbe
     let successCount = 0
     let errorCount = 0
 
-    for (const command of commandsToAdd) {
-      try {
-        const addResult = await window.electronAPI.library.createCommand(command)
-        if (addResult.success) {
-          successCount++
-        } else {
-          errorCount++
-          console.error('Failed to add command:', command.title)
-        }
-      } catch (error) {
-        errorCount++
-        console.error('Error adding command:', error)
+    if (commandsToAdd.length > 0) {
+      const addResult = await window.electronAPI.library.createCommands(commandsToAdd)
+      successCount = addResult.succeeded
+      errorCount = addResult.failed
+      if (addResult.failed > 0) {
+        console.error('Failed to import some commands:', addResult.errors)
       }
     }
 
@@ -711,22 +706,11 @@ const handleBulkDelete = async (ids: number[]) => {
   if (!confirmDelete) return
 
   try {
-    let successCount = 0
-    let errorCount = 0
-
-    for (const id of ids) {
-      try {
-        const result = await window.electronAPI.library.deleteCommand(id)
-        if (result.success) {
-          successCount++
-        } else {
-          errorCount++
-          console.error('Failed to delete command ID:', id)
-        }
-      } catch (error) {
-        errorCount++
-        console.error('Error deleting command ID:', id, error)
-      }
+    const result = await window.electronAPI.library.deleteCommands(ids)
+    const successCount = result.succeeded
+    const errorCount = result.failed
+    if (errorCount > 0) {
+      console.error('Failed to delete some commands:', result.errors)
     }
 
     // Reload commands

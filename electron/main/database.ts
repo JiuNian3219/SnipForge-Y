@@ -217,6 +217,36 @@ export function addCommand(command: Omit<Command, 'id' | 'created_at' | 'updated
     );
     return result.lastInsertRowid as number;
 }
+
+export function addCommands(commands: Array<Omit<Command, 'id' | 'created_at' | 'updated_at'>>): number {
+    if (!db) throw new Error("Database not initialized");
+    if (commands.length === 0) return 0
+
+    const now = new Date().toISOString()
+    const stmt = db.prepare(`
+        INSERT INTO commands (title, body, description, tags, language, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+    const transaction = db.transaction((items: Array<Omit<Command, 'id' | 'created_at' | 'updated_at'>>) => {
+        let inserted = 0
+        for (const command of items) {
+            const title = command.title?.slice(0, MAX_TITLE_LENGTH)
+            stmt.run(
+                title,
+                command.body,
+                command.description || '',
+                command.tags || '[]',
+                command.language || 'plaintext',
+                now,
+                now
+            )
+            inserted += 1
+        }
+        return inserted
+    })
+
+    return transaction(commands)
+}
 // test data function
 export function seedTestData(): void {
     if (!db) throw new Error("Database not initialized");

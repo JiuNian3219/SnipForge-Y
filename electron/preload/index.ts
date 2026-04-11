@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron"
-import type { Command, Library, SyncResult, AuthStatus, GitHubUser, BulkPublishResult, UpdateStatus, DiscoveredLibrary, DefaultWritableLibraryResult, DefaultWritableLibrarySetupResult, CommandMutationResult } from "../../shared/types"
+import type { Command, Library, SyncResult, AuthStatus, GitHubUser, BulkPublishResult, UpdateStatus, DiscoveredLibrary, DefaultWritableLibraryResult, DefaultWritableLibrarySetupResult, CommandMutationResult, BatchCommandMutationResult } from "../../shared/types"
 
 const subscribeToSignal = (channel: string, callback: () => void) => {
   const listener = () => callback()
@@ -103,10 +103,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:setupDefaultWritableLocalLibrary'),
     createCommand: (command: { title: string; body: string; description: string; tags: string; language: string }): Promise<CommandMutationResult> =>
       ipcRenderer.invoke('library:createCommand', command),
+    createCommands: (commands: Array<{ title: string; body: string; description: string; tags: string; language: string }>): Promise<BatchCommandMutationResult> =>
+      ipcRenderer.invoke('library:createCommands', commands),
     updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }): Promise<CommandMutationResult> =>
       ipcRenderer.invoke('library:updateCommand', id, updates),
     deleteCommand: (id: number): Promise<CommandMutationResult> =>
       ipcRenderer.invoke('library:deleteCommand', id),
+    deleteCommands: (ids: number[]): Promise<BatchCommandMutationResult> =>
+      ipcRenderer.invoke('library:deleteCommands', ids),
     browse: (repoUrl: string): Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }> =>
       ipcRenderer.invoke('library:browse', repoUrl),
     openLocal: (folderPath?: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }> =>
@@ -206,8 +210,10 @@ declare global {
         getDefaultWritableLocalLibrary: () => Promise<DefaultWritableLibraryResult>
         setupDefaultWritableLocalLibrary: () => Promise<DefaultWritableLibrarySetupResult>
         createCommand: (command: { title: string; body: string; description: string; tags: string; language: string }) => Promise<CommandMutationResult>
+        createCommands: (commands: Array<{ title: string; body: string; description: string; tags: string; language: string }>) => Promise<BatchCommandMutationResult>
         updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => Promise<CommandMutationResult>
         deleteCommand: (id: number) => Promise<CommandMutationResult>
+        deleteCommands: (ids: number[]) => Promise<BatchCommandMutationResult>
         browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
         openLocal: (folderPath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }>
         init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
