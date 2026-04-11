@@ -103,8 +103,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:deleteCommand', id),
     browse: (repoUrl: string): Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }> =>
       ipcRenderer.invoke('library:browse', repoUrl),
-    openLocal: (): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }> =>
-      ipcRenderer.invoke('library:openLocal'),
+    openLocal: (folderPath?: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }> =>
+      ipcRenderer.invoke('library:openLocal', folderPath),
     init: (libraryId: number, name: string, description: string, subpath?: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }> =>
       ipcRenderer.invoke('library:init', libraryId, name, description, subpath),
     getRepoFolders: (repoUrl: string): Promise<{ success: boolean; folders: string[]; error?: string }> =>
@@ -191,7 +191,7 @@ declare global {
         getStatus: () => Promise<AuthStatus>
       },
       library: {
-        subscribe: (repoUrl: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
+        subscribe: (repoUrl: string, subpath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }>
         unsubscribe: (libraryId: number) => Promise<{ success: boolean; error?: string }>
         setAutoSync: (libraryId: number, enabled: boolean) => Promise<{ success: boolean; error?: string }>
         sync: (libraryId: number) => Promise<{ success: boolean; added?: number; updated?: number; removed?: number; errors?: string[]; error?: string }>
@@ -203,7 +203,7 @@ declare global {
         updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => Promise<CommandMutationResult>
         deleteCommand: (id: number) => Promise<CommandMutationResult>
         browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
-        openLocal: () => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
+        openLocal: (folderPath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }>
         init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
         getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
         publish: (libraryId: number, commandId: number) => Promise<{ success: boolean; path?: string; created?: boolean; error?: string }>

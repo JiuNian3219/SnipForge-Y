@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import AdmZip from 'adm-zip'
 import * as db from './database'
 import * as settings from './settings'
-import type { CommandMutationResult, Library, LibraryManifest, RemoteCommand, SyncResult } from '../../shared/types'
+import type { CommandMutationResult, DiscoveredLibrary, Library, LibraryManifest, RemoteCommand, SyncResult } from '../../shared/types'
 
 // ── Local Folder Scanning ────────────────────────────────────────
 
@@ -160,6 +160,49 @@ async function readFolderManifest(folderPath: string): Promise<ScanResult | null
     }
 }
 
+async function findManifests(rootPath: string, maxDepth: number, depth = 0): Promise<string[]> {
+    const manifests: string[] = []
+    const entries = await fs.readdir(rootPath, { withFileTypes: true })
+
+    for (const entry of entries) {
+        const entryPath = path.join(rootPath, entry.name)
+
+        if (entry.isFile() && entry.name === '.snipforge.json') {
+            manifests.push(entryPath)
+            continue
+        }
+
+        if (!entry.isDirectory()) {
+            continue
+        }
+
+        if (depth >= maxDepth) {
+            continue
+        }
+
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+            continue
+        }
+
+        manifests.push(...await findManifests(entryPath, maxDepth, depth + 1))
+    }
+
+    return manifests
+}
+
+async function buildDiscoveredLocalLibrary(manifestFilePath: string): Promise<DiscoveredLibrary> {
+    const libraryRoot = path.dirname(manifestFilePath)
+    const scanResult = await scanLocalFolder(libraryRoot)
+
+    return {
+        name: scanResult.manifest.name || path.basename(libraryRoot),
+        description: scanResult.manifest.description || '',
+        path: libraryRoot,
+        manifestPath: manifestFilePath,
+        commandCount: scanResult.commands.length,
+    }
+}
+
 async function createManifestIfMissing(folderPath: string): Promise<ScanResult> {
     const existing = await readFolderManifest(folderPath)
     if (existing) return existing
@@ -197,18 +240,15 @@ function buildLocalSyncPayload(commands: ScanResult['commands'], existingBodies:
         }))
 }
 
-async function indexLocalLibrary(folderPath: string, options: { ensureManifest: boolean; allowExisting: boolean }): Promise<{ library: Library; syncResult: SyncResult }> {
-    const stat = await fs.stat(folderPath)
-    if (!stat.isDirectory()) throw new Error('Not a directory')
-
+function addLibraryFromScan(
+    folderPath: string,
+    scanResult: ScanResult | null,
+    options: { allowExisting: boolean }
+): { library: Library; syncResult: SyncResult } {
     const existing = db.getLibraryByRepo(folderPath)
     if (existing && !options.allowExisting) {
         throw new Error(`Already added: ${path.basename(folderPath)}`)
     }
-
-    const scanResult = options.ensureManifest
-        ? await createManifestIfMissing(folderPath)
-        : await readFolderManifest(folderPath)
 
     if (!scanResult) {
         const folderName = deriveLibraryName(folderPath)
@@ -250,6 +290,17 @@ async function indexLocalLibrary(folderPath: string, options: { ensureManifest: 
     )
     const library = db.getLibraryByRepo(folderPath)!
     return { library, syncResult }
+}
+
+async function indexLocalLibrary(folderPath: string, options: { ensureManifest: boolean; allowExisting: boolean }): Promise<{ library: Library; syncResult: SyncResult }> {
+    const stat = await fs.stat(folderPath)
+    if (!stat.isDirectory()) throw new Error('Not a directory')
+
+    const scanResult = options.ensureManifest
+        ? await createManifestIfMissing(folderPath)
+        : await readFolderManifest(folderPath)
+
+    return addLibraryFromScan(folderPath, scanResult, { allowExisting: options.allowExisting })
 }
 
 export async function createLocalLibraryCommand(command: CommandFormData): Promise<CommandMutationResult> {
@@ -576,7 +627,7 @@ export async function migrateLegacyDbOnlyCommandsToDefaultLibrary(): Promise<{
 }
 // ── Open Local Folder ────────────────────────────────────────────
 
-export async function openLocalFolder(folderPath: string): Promise<{ library: Library; syncResult: SyncResult }> {
+export async function openLocalFolder(folderPath: string): Promise<{ library: Library; syncResult: SyncResult } | { needsPick: true; libraries: DiscoveredLibrary[] }> {
     // Check folder exists
     try {
         const stat = await fs.stat(folderPath)
@@ -586,7 +637,25 @@ export async function openLocalFolder(folderPath: string): Promise<{ library: Li
         throw new Error(`Folder not found: ${folderPath}`)
     }
 
-    return indexLocalLibrary(folderPath, { ensureManifest: false, allowExisting: false })
+    const rootScan = await readFolderManifest(folderPath)
+    if (rootScan) {
+        return addLibraryFromScan(folderPath, rootScan, { allowExisting: false })
+    }
+
+    const manifestPaths = (await findManifests(folderPath, 5)).sort()
+    if (manifestPaths.length === 0) {
+        return addLibraryFromScan(folderPath, null, { allowExisting: false })
+    }
+
+    if (manifestPaths.length === 1) {
+        const libraryRoot = path.dirname(manifestPaths[0])
+        const scanResult = await scanLocalFolder(libraryRoot)
+        return addLibraryFromScan(libraryRoot, scanResult, { allowExisting: false })
+    }
+
+    const libraries = await Promise.all(manifestPaths.map(buildDiscoveredLocalLibrary))
+    libraries.sort((a, b) => a.path.localeCompare(b.path))
+    return { needsPick: true, libraries }
 }
 
 export async function setupDefaultWritableLocalLibrary(folderPath: string): Promise<{ library: Library; syncResult: SyncResult }> {

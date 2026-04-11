@@ -643,6 +643,8 @@ Addresses two shortcomings from the original design: excessive REST API calls (o
 
 #### Phase 7: Local Library Parity — Recursive Discovery + Multi-Library Picker (issue [#16](https://github.com/ArtluxDM/SnipForge/issues/16))
 
+**Status:** Complete
+
 Closes the gap between GitHub and local library behavior. When you open a repo root as a local library, the manifest is often in a subdirectory — but the current implementation only checks the folder root (`path.join(folderPath, '.snipforge.json')`), so it misses the manifest entirely and asks the user to init.
 
 **Problem:**
@@ -678,3 +680,10 @@ Update `openLocalFolder` to use it when the root check fails:
 4. Pick from the picker → correct subdirectory subscribed, commands appear
 5. Open a folder with no manifest anywhere → adds as uninitialized with Init button (unchanged)
 6. Already-added check works correctly for the subdir path (not the root path)
+
+**Implementation notes:**
+- `openLocalFolder()` now does a root manifest check first, then falls back to recursive manifest discovery capped at depth 5.
+- Recursive discovery skips hidden directories and `node_modules`, returns the nested library directly when only one manifest exists, and returns picker data when multiple manifests are found.
+- The local picker reuses the existing multi-library modal in `SettingsModal.vue`, but now branches cleanly between GitHub repo subscription and local-folder opening.
+- `library:openLocal` and the preload bridge now accept an optional folder path so the picker can reopen the selected subdirectory without showing the native folder dialog again.
+- Regression coverage in `tests/local-library.test.ts` now covers both the single-nested-library path and the multi-library picker path.

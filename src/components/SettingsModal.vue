@@ -547,7 +547,10 @@
     <div v-if="libraryPicker.visible" class="init-modal-overlay" @click.self="closeLibraryPicker">
       <div class="init-modal" style="width: 420px;">
         <h3>Choose a Library</h3>
-        <p class="init-modal-repo">This repo has {{ libraryPicker.libraries.length }} libraries</p>
+        <p class="init-modal-repo">
+          {{ libraryPicker.type === 'local' ? 'This folder has' : 'This repo has' }}
+          {{ libraryPicker.libraries.length }} libraries
+        </p>
         <div class="picker-list">
           <button
             v-for="lib in libraryPicker.libraries"
@@ -1039,6 +1042,7 @@ const defaultWritableLibrary = computed(() => {
 // ── Library Picker State ──────────────────────────────────────
 const libraryPicker = ref({
   visible: false,
+  type: 'github' as 'github' | 'local',
   repoUrl: '',
   libraries: [] as DiscoveredLibrary[],
 })
@@ -1053,11 +1057,18 @@ async function handlePickLibrary(lib: DiscoveredLibrary) {
   libraryError.value = ''
 
   try {
-    const result = await (window.electronAPI as any).library.subscribe(libraryPicker.value.repoUrl, lib.path)
+    const result = libraryPicker.value.type === 'local'
+      ? await (window.electronAPI as any).library.openLocal(lib.path)
+      : await (window.electronAPI as any).library.subscribe(libraryPicker.value.repoUrl, lib.path)
+
     if (result.success) {
-      newRepoUrl.value = ''
       await loadLibraries()
-      syncMessage.value = `Subscribed to ${lib.name}! Added ${result.syncResult?.added || 0} commands.`
+      if (libraryPicker.value.type === 'github') {
+        newRepoUrl.value = ''
+      }
+      syncMessage.value = libraryPicker.value.type === 'local'
+        ? `Opened ${lib.name}! Added ${result.syncResult?.added || 0} commands.`
+        : `Subscribed to ${lib.name}! Added ${result.syncResult?.added || 0} commands.`
       syncMessageType.value = 'success'
       emit('libraries-changed')
       clearSyncMessage()
@@ -1513,6 +1524,7 @@ async function handleSubscribe() {
       // Multiple libraries found — show picker
       libraryPicker.value = {
         visible: true,
+        type: 'github',
         repoUrl: newRepoUrl.value.trim(),
         libraries: result.libraries,
       }
@@ -1548,6 +1560,15 @@ async function handleOpenLocalFolder() {
 
   try {
     const result = await (window.electronAPI as any).library.openLocal()
+    if (result.needsPick) {
+      libraryPicker.value = {
+        visible: true,
+        type: 'local',
+        repoUrl: '',
+        libraries: result.libraries,
+      }
+      return
+    }
     if (!result.success) {
       if (result.error !== 'cancelled') {
         libraryError.value = result.error || 'Failed to open folder'

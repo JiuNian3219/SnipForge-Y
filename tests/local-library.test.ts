@@ -8,6 +8,7 @@ import {
     createLocalLibraryCommand,
     deleteLocalLibraryCommand,
     migrateLegacyDbOnlyCommandsToDefaultLibrary,
+    openLocalFolder,
     reindexInitializedLocalLibraries,
     scanLocalFolder,
     setupDefaultWritableLocalLibrary,
@@ -198,6 +199,77 @@ describe('scanLocalFolder', () => {
 })
 
 describe('local library CRUD', () => {
+    it('opens a nested library when the chosen folder only contains a manifest in a subdirectory', async () => {
+        const nestedRoot = path.join(tmpDir, 'repo-root')
+        const libraryRoot = path.join(nestedRoot, 'The Armory')
+        await fs.mkdir(libraryRoot, { recursive: true })
+        await fs.writeFile(path.join(libraryRoot, '.snipforge.json'), JSON.stringify({
+            name: 'The Armory',
+            description: 'Nested library',
+            format_version: '1.0',
+        }))
+        await fs.writeFile(path.join(libraryRoot, 'ping.json'), JSON.stringify({
+            title: 'Ping',
+            body: 'ping 1.1.1.1',
+            tags: ['network'],
+        }))
+
+        const result = await openLocalFolder(nestedRoot)
+
+        expect('needsPick' in result).toBe(false)
+        if ('needsPick' in result) {
+            throw new Error('Expected nested library to open directly')
+        }
+
+        expect(result.library.github_repo).toBe(libraryRoot)
+        expect(result.library.manifest_path).toBe('.snipforge.json')
+        expect(result.syncResult.added).toBe(1)
+
+        const libraries = db.getAllLibraries()
+        expect(libraries).toHaveLength(1)
+        expect(libraries[0].github_repo).toBe(libraryRoot)
+    })
+
+    it('returns a picker payload when a folder contains multiple nested libraries', async () => {
+        const nestedRoot = path.join(tmpDir, 'repo-root')
+        const alphaRoot = path.join(nestedRoot, 'alpha')
+        const betaRoot = path.join(nestedRoot, 'beta')
+        await fs.mkdir(alphaRoot, { recursive: true })
+        await fs.mkdir(betaRoot, { recursive: true })
+
+        await fs.writeFile(path.join(alphaRoot, '.snipforge.json'), JSON.stringify({
+            name: 'Alpha',
+            description: 'First',
+            format_version: '1.0',
+        }))
+        await fs.writeFile(path.join(betaRoot, '.snipforge.json'), JSON.stringify({
+            name: 'Beta',
+            description: 'Second',
+            format_version: '1.0',
+        }))
+        await fs.writeFile(path.join(alphaRoot, 'one.json'), JSON.stringify({
+            title: 'One',
+            body: 'echo one',
+        }))
+        await fs.writeFile(path.join(betaRoot, 'two.json'), JSON.stringify({
+            title: 'Two',
+            body: 'echo two',
+        }))
+
+        const result = await openLocalFolder(nestedRoot)
+
+        expect('needsPick' in result).toBe(true)
+        if (!('needsPick' in result)) {
+            throw new Error('Expected multiple nested libraries to require picking')
+        }
+
+        expect(result.libraries).toHaveLength(2)
+        expect(result.libraries.map(lib => lib.name)).toEqual(['Alpha', 'Beta'])
+        expect(result.libraries.map(lib => lib.path)).toEqual([alphaRoot, betaRoot])
+        expect(result.libraries.map(lib => lib.commandCount)).toEqual([1, 1])
+        expect(db.getAllLibraries()).toHaveLength(0)
+    })
+
     it('writes created commands to disk with a stable id, then updates and deletes the same file', async () => {
         const setup = await setupDefaultWritableLocalLibrary(tmpDir)
         const createResult = await createLocalLibraryCommand({

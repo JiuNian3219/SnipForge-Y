@@ -907,18 +907,28 @@ ipcMain.handle('library:unpublish', async (_, libraryId: number, remotePath: str
   }
 })
 
-ipcMain.handle('library:openLocal', async () => {
+ipcMain.handle('library:openLocal', async (_, requestedFolderPath?: string) => {
   if (!win) return { success: false, error: 'No window' }
   try {
-    const result = await dialog.showOpenDialog(win, {
-      title: 'Open Library Folder',
-      properties: ['openDirectory'],
-    })
-    if (result.canceled || !result.filePaths[0]) {
-      return { success: false, error: 'cancelled' }
+    let folderPath = requestedFolderPath
+
+    if (!folderPath) {
+      const result = await dialog.showOpenDialog(win, {
+        title: 'Open Library Folder',
+        properties: ['openDirectory'],
+      })
+      if (result.canceled || !result.filePaths[0]) {
+        return { success: false, error: 'cancelled' }
+      }
+      folderPath = result.filePaths[0]
     }
-    const folderPath = result.filePaths[0]
-    const { library, syncResult } = await localLibrary.openLocalFolder(folderPath)
+
+    const result = await localLibrary.openLocalFolder(folderPath)
+    if ('needsPick' in result) {
+      return { success: false, needsPick: true, libraries: result.libraries }
+    }
+
+    const { library, syncResult } = result
     localLibrary.refreshFileWatchers()
     return { success: true, library, syncResult }
   } catch (error) {
