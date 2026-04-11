@@ -1176,20 +1176,27 @@ ipcMain.handle('window:getPlatform', () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 
-
-
-app.whenReady().then(() => {
-  createWindow()
-  createTray()
-  startAutoSync() // Start if library.autoSync is enabled
-  localLibrary.startFileWatchers()
-  localLibrary.onFileWatcherSync((_libraryId, result) => {
-    if ((result.added || result.updated || result.removed) && win && !win.isDestroyed()) {
-      win.webContents.send('commands:changed')
-    }
-  })
-  updater.setWindow(win)
-  updater.startUpdateChecker()
+app.whenReady().then(async () => {
+  try {
+    await createWindow()
+    createTray()
+    startAutoSync() // Start if library.autoSync is enabled
+    localLibrary.startFileWatchers()
+    localLibrary.onFileWatcherSync((_libraryId, result) => {
+      if ((result.added || result.updated || result.removed) && win && !win.isDestroyed()) {
+        win.webContents.send('commands:changed')
+      }
+    })
+    updater.setWindow(win)
+    updater.startUpdateChecker()
+  } catch (error) {
+    console.error('App startup failed:', error)
+    dialog.showErrorBox(
+      'SnipForge Failed To Start',
+      (error as Error).message || 'Unknown startup error'
+    )
+    app.quit()
+  }
 })
 
 app.on('window-all-closed', () => {

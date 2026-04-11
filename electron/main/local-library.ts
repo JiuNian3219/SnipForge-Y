@@ -699,6 +699,7 @@ export async function exportAsLibrary(input: ExportLibraryInput): Promise<string
 
         const commandData = {
             snipforge: 'command' as const,
+            id: createCommandId(),
             title: cmd.title,
             body: cmd.body,
             description: cmd.description || '',

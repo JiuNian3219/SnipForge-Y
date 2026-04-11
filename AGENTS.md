@@ -1,16 +1,21 @@
-# CLAUDE.md
-
-This file is the behavioral guide and knowledge map for Claude Code working on this project. Keep it lean — point to docs, don't duplicate them. Update it when how we work changes, not by appending but by editing.
+---
+title: "snipforge"
+tags: [project, electron, desktop, active]
+status: active
+cluster: snipforge
+tech: [electron, vue3, typescript, sqlite, vite, fuse.js]
+related:
+  - "[[snipforge-website/CLAUDE]]"
+  - "[[home-lab/CLAUDE]]"
+---
 
 ## What This Is
 
 SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching, and managing command snippets. Global hotkey opens a palette, you search, you copy. The user is an engineer/human/ai_agent who needs commands/snippets fast — every UX decision serves that.
 
-## How We Work
+## Workflow
 
-**We are co-developers.** Challenge bad ideas, propose better approaches, make architectural decisions together. No hand-holding, no unnecessary explanations — but when we're in new territory, think out loud so we both learn.
-
-**Doc-first workflow:**
+**Doc-first:**
 1. Update the feature doc with the plan before writing code
 2. Implement, referencing the GitHub issue in commits (`ref #N` or `fixes #N`)
 3. Update the feature doc with final notes and mark deliverables complete
@@ -21,8 +26,6 @@ SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching
 **User-first mindset.** We're not building code for code's sake. Every feature exists because a person needs it. Think about how functional it is for the end user — that's the driver, not how fancy the implementation is.
 
 **Context management.** For large features, split into two issues: backend (#N-backend) and frontend (#N-frontend). Backend session handles main process, SQLite, IPC, types. Frontend session starts fresh with clean context and handles Vue components, styles, visual verification. This avoids hallucinations from context pressure. Chrome DevTools MCP is available directly for screenshots and visual verification (`pnpm dev:debug`). See `.claude/README.md` for available agents.
-
-**This file is part of the workflow.** When how we work changes, CLAUDE.md gets updated in the same commit. Don't append endlessly — edit to keep it current.
 
 ## Tech Stack
 
@@ -69,6 +72,7 @@ Feature documentation lives in `docs/`. These are living documents — plan, imp
 | Doc | What | Status |
 |-----|------|--------|
 | `docs/schema.md` | Database schema — tables, columns, migrations, TypeScript types | Living reference |
+| `docs/library-first-command-storage.md` | Library-first command model — filesystem source of truth, SQLite as cache/index, roadmap and issue plan | Planned |
 | `docs/remote-libraries.md` | Remote Libraries — GitHub sync, publishing, unified library model | Phases 1-4 complete, Phase 5 planned |
 | `docs/settings.md` | Settings — infrastructure, General tab, connectors, auto-sync, shortcuts | Phases 1-3 complete |
 | `docs/variable-substitution.md` | Variable substitution — `{{variable}}` templates, copy flow, highlighting | Current state documented, #11 planned |
