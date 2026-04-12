@@ -11,6 +11,7 @@ import {
     deleteLocalLibraryCommands,
     deleteLocalLibraryCommand,
     migrateLegacyDbOnlyCommandsToDefaultLibrary,
+    migrateRemoteLibrariesToLocalWorkingCopies,
     openLocalFolder,
     reindexInitializedLocalLibraries,
     scanLocalFolder,
@@ -203,6 +204,70 @@ describe('scanLocalFolder', () => {
 })
 
 describe('local library CRUD', () => {
+    it('migrates subscribed GitHub libraries into deterministic local working copies', async () => {
+        const remoteRepo = 'ArtluxDM/snips/subdir'
+        const libraryId = db.addLibrary(remoteRepo, 'Remote Library', 'Remote desc', 'subdir/.snipforge.json', 'github', 'consumer')
+
+        db.syncRemoteCommands(libraryId, 'abc123', [
+            {
+                remotePath: 'subdir/hello-world.json',
+                command: {
+                    title: 'Hello World',
+                    body: 'echo hello',
+                    description: 'greeting',
+                    tags: '["hello"]',
+                    language: 'bash',
+                    created_at: '2026-01-01T00:00:00Z',
+                    updated_at: '2026-01-02T00:00:00Z',
+                }
+            }
+        ], [], [])
+
+        const result = await migrateRemoteLibrariesToLocalWorkingCopies(tmpDir)
+        expect(result.migrated).toBe(1)
+        expect(result.errors).toEqual([])
+
+        const libraries = db.getAllLibraries()
+        expect(libraries).toHaveLength(1)
+        const migrated = libraries[0]
+
+        const expectedRoot = path.join(tmpDir, 'working-copies', 'github', 'ArtluxDM', 'snips', 'subdir')
+        expect(migrated.type).toBe('local')
+        expect(migrated.github_repo).toBe(expectedRoot)
+        expect(migrated.local_path).toBe(expectedRoot)
+        expect(migrated.origin).toEqual({
+            provider: 'github',
+            url: remoteRepo,
+            ref: 'abc123',
+        })
+        expect(migrated.working_copy).toEqual({
+            local_path: expectedRoot,
+            manifest_path: '.snipforge.json',
+            materialized: true,
+        })
+
+        const manifest = JSON.parse(await fs.readFile(path.join(expectedRoot, '.snipforge.json'), 'utf8'))
+        expect(manifest.name).toBe('Remote Library')
+        expect(manifest.description).toBe('Remote desc')
+
+        const commandFile = JSON.parse(await fs.readFile(path.join(expectedRoot, 'hello-world.json'), 'utf8'))
+        expect(commandFile.title).toBe('Hello World')
+        expect(commandFile.body).toBe('echo hello')
+        expect(commandFile.tags).toEqual(['hello'])
+
+        const migratedCommands = db.getRemoteCommands(migrated.id)
+        expect(migratedCommands).toHaveLength(1)
+        expect(migratedCommands[0].remote_path).toBe('hello-world.json')
+
+        const reindexResults = await reindexInitializedLocalLibraries()
+        expect(reindexResults).toHaveLength(1)
+        expect(reindexResults[0].result.errors).toEqual([])
+
+        const rerun = await migrateRemoteLibrariesToLocalWorkingCopies(tmpDir)
+        expect(rerun.migrated).toBe(0)
+        expect(db.getAllLibraries()).toHaveLength(1)
+    })
+
     it('opens a nested library when the chosen folder only contains a manifest in a subdirectory', async () => {
         const nestedRoot = path.join(tmpDir, 'repo-root')
         const libraryRoot = path.join(nestedRoot, 'The Armory')

@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import { promises as fs, watch, type FSWatcher } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -325,20 +326,44 @@ async function resolveUpdatedCommandFileName(
     return findUniqueCommandFileName(folderPath, nextTitle, { excludeFileName: currentFileName })
 }
 
-async function readLibraryCommandFileMetadata(filePath: string): Promise<{ id: string | null; created_at?: string } | null> {
+async function readLibraryCommandFileMetadata(filePath: string): Promise<{ id: string | null; created_at?: string; updated_at?: string } | null> {
     try {
         const parsed = JSON.parse(await fs.readFile(filePath, 'utf8')) as {
             id?: string
             created_at?: string
+            updated_at?: string
         }
 
         return {
             id: normalizeCommandId(parsed.id),
             created_at: parsed.created_at,
+            updated_at: parsed.updated_at,
         }
     } catch {
         return null
     }
+}
+
+function getWorkingCopyRootPath(baseDir: string, libraryRepo: string): string {
+    return path.join(baseDir, 'working-copies', 'github', ...libraryRepo.split('/').filter(Boolean))
+}
+
+function getManifestDirectory(manifestPath: string | null): string {
+    if (!manifestPath || !manifestPath.includes('/')) {
+        return ''
+    }
+
+    return manifestPath.slice(0, manifestPath.lastIndexOf('/'))
+}
+
+function toWorkingCopyCommandPath(remotePath: string, manifestPath: string | null): string {
+    const manifestDir = getManifestDirectory(manifestPath)
+    if (!manifestDir) {
+        return remotePath
+    }
+
+    const prefix = `${manifestDir}/`
+    return remotePath.startsWith(prefix) ? remotePath.slice(prefix.length) : remotePath
 }
 
 function resolveFileBackedLocalCommand(commandId: number): { command: db.Command; library: Library } | null {
@@ -922,6 +947,89 @@ export async function reindexInitializedLocalLibraries(): Promise<Array<{ librar
     }
 
     return results
+}
+
+export async function migrateRemoteLibrariesToLocalWorkingCopies(baseDir = app.getPath('userData')): Promise<{
+    migrated: number
+    skipped: number
+    errors: string[]
+}> {
+    const libraries = db.getAllLibraries()
+    const remoteLibraries = libraries.filter(library => library.type === 'github')
+    const errors: string[] = []
+    let migrated = 0
+    let skipped = 0
+
+    for (const library of remoteLibraries) {
+        try {
+            const targetRoot = getWorkingCopyRootPath(baseDir, library.github_repo)
+            await fs.mkdir(targetRoot, { recursive: true })
+
+            const manifestPath = path.join(targetRoot, '.snipforge.json')
+            const manifest = {
+                snipforge: 'library',
+                name: library.name,
+                description: library.description || '',
+                format_version: '1.0',
+            }
+            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
+
+            const remoteCommands = db.getRemoteCommands(library.id)
+            for (const command of remoteCommands) {
+                const localPath = toWorkingCopyCommandPath(command.remote_path || '', library.manifest_path)
+                if (!localPath) {
+                    skipped += 1
+                    continue
+                }
+
+                const filePath = path.join(targetRoot, localPath)
+                await fs.mkdir(path.dirname(filePath), { recursive: true })
+                const existing = await readLibraryCommandFileMetadata(filePath)
+                const fileData = buildLibraryCommandFileData({
+                    title: command.title,
+                    body: command.body,
+                    description: command.description,
+                    tags: command.tags,
+                    language: command.language,
+                    created_at: existing?.created_at || command.created_at,
+                    updated_at: existing?.updated_at || command.updated_at,
+                }, existing?.id || createCommandId(), existing?.updated_at || command.updated_at)
+
+                await fs.writeFile(filePath, serializeLibraryCommandFile(fileData), 'utf8')
+
+                const pathChanged = localPath !== command.remote_path
+                if (pathChanged || command.source !== 'remote') {
+                    const updated = db.updateRemoteCommandById(command.id, {
+                        remote_path: localPath,
+                        title: command.title,
+                        body: command.body,
+                        description: command.description,
+                        tags: command.tags,
+                        language: command.language,
+                        created_at: command.created_at,
+                        updated_at: command.updated_at,
+                    })
+
+                    if (!updated) {
+                        throw new Error(`Failed to update command path for ${command.title}`)
+                    }
+                }
+            }
+
+            db.updateLibraryToLocalWorkingCopy(
+                library.id,
+                targetRoot,
+                library.github_repo,
+                library.last_synced_sha
+            )
+
+            migrated += 1
+        } catch (error) {
+            errors.push(`Failed to migrate "${library.name}": ${(error as Error).message}`)
+        }
+    }
+
+    return { migrated, skipped, errors }
 }
 
 export async function migrateLegacyDbOnlyCommandsToDefaultLibrary(): Promise<{

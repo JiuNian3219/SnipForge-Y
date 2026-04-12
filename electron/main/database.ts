@@ -4,6 +4,10 @@ import { app } from "electron";
 import type { Command, Library, LibraryType, LibraryPermission, SyncResult } from "../../shared/types";
 
 export type { Command, Library }
+type LibraryRow = Omit<Library, 'local_path' | 'origin' | 'working_copy'> & {
+    origin_url?: string | null
+    origin_ref?: string | null
+}
 // Initialize and export the database connection
 let db: Database.Database | null = null;
 export function initializeDatabase(customDbPath?: string) {
@@ -77,6 +81,8 @@ try {
             description TEXT DEFAULT '',
             last_synced_at TEXT,
             last_synced_sha TEXT,
+            origin_url TEXT,
+            origin_ref TEXT,
             created_at TEXT NOT NULL
         );
     `)
@@ -109,6 +115,16 @@ try {
     try {
         db.exec(`ALTER TABLE libraries ADD COLUMN type TEXT NOT NULL DEFAULT 'github'`)
         console.log('Added type column to libraries')
+    } catch { /* already exists */ }
+
+    try {
+        db.exec(`ALTER TABLE libraries ADD COLUMN origin_url TEXT`)
+        console.log('Added origin_url column to libraries')
+    } catch { /* already exists */ }
+
+    try {
+        db.exec(`ALTER TABLE libraries ADD COLUMN origin_ref TEXT`)
+        console.log('Added origin_ref column to libraries')
     } catch { /* already exists */ }
 
     // Per-library auto-sync toggle
@@ -282,37 +298,39 @@ export function seedTestData(): void {
 
 // ── Library functions ──────────────────────────────────────────────
 
-function toLibraryContract(row: Library): Library {
+function toLibraryContract(row: LibraryRow): Library {
     const isLocal = row.type === 'local'
     const localPath = isLocal ? row.github_repo : null
+    const originUrl = row.origin_url ?? (isLocal ? null : row.github_repo)
+    const { origin_url, origin_ref, ...rest } = row
 
     return {
-        ...row,
+        ...rest,
         local_path: localPath,
-        origin: isLocal
-            ? null
-            : {
+        origin: originUrl
+            ? {
                 provider: 'github',
-                url: row.github_repo,
-                ref: row.last_synced_sha,
-            },
+                url: originUrl,
+                ref: row.origin_ref ?? row.last_synced_sha ?? null,
+            }
+            : null,
         working_copy: {
             local_path: localPath,
             manifest_path: row.manifest_path,
-            materialized: isLocal,
+            materialized: isLocal && !!row.manifest_path,
         },
     }
 }
 
 export function getAllLibraries(): Library[] {
     if (!db) throw new Error("Database not initialized")
-    const rows = db.prepare("SELECT * FROM libraries ORDER BY created_at DESC").all() as Library[]
+    const rows = db.prepare("SELECT * FROM libraries ORDER BY created_at DESC").all() as LibraryRow[]
     return rows.map(toLibraryContract)
 }
 
 export function getLibraryByRepo(githubRepo: string): Library | undefined {
     if (!db) throw new Error("Database not initialized")
-    const row = db.prepare("SELECT * FROM libraries WHERE github_repo = ?").get(githubRepo) as Library | undefined
+    const row = db.prepare("SELECT * FROM libraries WHERE github_repo = ?").get(githubRepo) as LibraryRow | undefined
     return row ? toLibraryContract(row) : undefined
 }
 
@@ -339,6 +357,20 @@ export function updateLibraryManifest(libraryId: number, name: string, descripti
     db.prepare(`
         UPDATE libraries SET name = ?, description = ?, manifest_path = ? WHERE id = ?
     `).run(name, description, manifestPath, libraryId)
+}
+
+export function updateLibraryToLocalWorkingCopy(
+    libraryId: number,
+    localPath: string,
+    originUrl: string,
+    originRef: string | null
+): void {
+    if (!db) throw new Error("Database not initialized")
+    db.prepare(`
+        UPDATE libraries
+        SET github_repo = ?, type = 'local', manifest_path = '.snipforge.json', origin_url = ?, origin_ref = ?
+        WHERE id = ?
+    `).run(localPath, originUrl, originRef, libraryId)
 }
 
 export function clearLibraryManifest(libraryId: number): void {

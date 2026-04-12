@@ -111,6 +111,25 @@ describe('library contract mapping', () => {
             materialized: true,
         })
     })
+
+    it('hydrates origin metadata for migrated GitHub libraries', () => {
+        const libraryId = db.addLibrary('github.com/owner/repo', 'Remote Library', 'desc', 'nested/.snipforge.json', 'github', 'consumer')
+        db.updateLibraryToLocalWorkingCopy(libraryId, '/tmp/working-copy', 'github.com/owner/repo', 'abc123')
+
+        const library = db.getAllLibraries()[0]
+
+        expect(library.local_path).toBe('/tmp/working-copy')
+        expect(library.origin).toEqual({
+            provider: 'github',
+            url: 'github.com/owner/repo',
+            ref: 'abc123',
+        })
+        expect(library.working_copy).toEqual({
+            local_path: '/tmp/working-copy',
+            manifest_path: '.snipforge.json',
+            materialized: true,
+        })
+    })
 })
 
 // ── syncRemoteCommands ──────────────────────────────────────────
