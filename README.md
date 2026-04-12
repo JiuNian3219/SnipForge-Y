@@ -104,6 +104,7 @@ cd SnipForge
 pnpm install
 pnpm dev       # development
 pnpm build     # production build
+pnpm test:db   # rebuild better-sqlite3 and run the SQLite test suite
 ```
 
 ## Tech Stack

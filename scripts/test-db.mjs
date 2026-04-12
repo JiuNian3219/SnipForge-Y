@@ -1,11 +1,20 @@
 #!/usr/bin/env node
 
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+
+const npmCacheDir = process.env.npm_config_cache ?? mkdtempSync(join(tmpdir(), 'snipforge-npm-cache-'))
 
 function run(command, args) {
   const result = spawnSync(command, args, {
     stdio: 'inherit',
     shell: process.platform === 'win32',
+    env: {
+      ...process.env,
+      npm_config_cache: npmCacheDir,
+    },
   })
 
   if (result.error) {

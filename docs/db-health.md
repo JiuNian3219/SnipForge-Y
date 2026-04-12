@@ -14,13 +14,32 @@ Light and non-intrusive. This is not a database management framework — it's a 
 
 ## DB Test Recovery
 
+### Issue #27: restore runnable DB tests after Node ABI/native module drift
+
+Plan:
+- make `pnpm test:db` self-contained so native rebuilds do not depend on a writable global npm cache
+- keep the rebuild and SQLite suite behind one repeatable recovery command
+- document the expected toolchain prerequisites explicitly instead of leaving contributors to infer them from `node-gyp` output
+
 When `tests/database.test.ts` stops loading after a Node upgrade or ABI drift, rebuild the native module and rerun the DB suite:
 
 ```bash
 pnpm test:db
 ```
 
-That command rebuilds `better-sqlite3` against the current environment and then runs `tests/database.test.ts`.
+That command provisions a temporary writable npm cache, rebuilds `better-sqlite3` against the current environment, and then runs `tests/database.test.ts`.
+
+Machine prerequisites:
+
+- `pnpm install`
+- Xcode Command Line Tools on macOS so `node-gyp` can compile `better-sqlite3` when a prebuilt binary is unavailable
+- Python 3 available to `node-gyp`
+
+If the rebuild still fails, run `pnpm rebuild better-sqlite3` directly to inspect the compiler error. The common failure mode is missing local build tooling, not an app-level test problem.
+
+Final notes:
+- `scripts/test-db.mjs` now injects a temp npm cache before rebuilding `better-sqlite3`, which avoids relying on `~/.npm` being writable during recovery runs
+- the recovery path stays as one command, but the doc now makes its toolchain assumptions explicit
 
 ## Checks
 
