@@ -59,3 +59,59 @@ The package also exposes `pnpm cli -- ...` in local development.
 |------|------|
 | 2026-04-11 | Planned CLI v1 around direct library-file reads, terminal search/list flows, and clipboard copy for non-variable commands |
 | 2026-04-11 | Implemented `bin/snipforge.mjs` with `list`, `search`, and `copy`, added `pnpm cli -- ...`, and covered library loading + copy guardrails in tests |
+
+---
+
+## TypeScript Indexer MVP
+
+**GitHub Issue:** #30
+
+## Scope
+
+- Crawl a local TypeScript repository on demand from the CLI
+- Extract exported functions, interfaces, and type aliases using the TypeScript AST
+- Generate or update a local SnipForge library from the crawl result
+- Preserve source-location metadata in the generated command content
+
+## Non-goals
+
+- Live file watching
+- JavaScript support in the MVP
+- Indexing non-exported implementation details
+- Full semantic analysis across package boundaries
+
+## Plan
+
+- [x] Add a CLI command for indexing a TypeScript repository into a SnipForge library
+- [x] Walk `.ts` and `.tsx` files while skipping generated and dependency folders
+- [x] Extract supported exported declarations with stable output ids/paths so reruns update instead of duplicating
+- [x] Remove stale generated entries from previous runs without touching unrelated library files
+- [x] Add regression coverage for extraction, output generation, and rerun cleanup
+
+## Intended Usage Shape
+
+```bash
+node bin/snipforge.mjs index-ts ~/work/my-repo
+node bin/snipforge.mjs index-ts ~/work/my-repo --out ~/commands/my-repo-index
+pnpm cli -- index-ts ~/work/my-repo --out ./The\\ Armory/my-repo-index
+```
+
+## Current Behavior
+
+- `index-ts` crawls `.ts` and `.tsx` files, skipping dependency/build folders like `node_modules`, `.git`, `dist`, and `build`
+- The indexer extracts exported functions, interfaces, type aliases, and exported function-valued `const` declarations using the TypeScript AST
+- Generated command files include stable ids, deterministic filenames, and `source_location` metadata with file + line information
+- Re-running against the same output library updates existing generated entries and removes stale generated files tracked by `.snipforge-index.json`
+- `pnpm cli -- index-ts ...` works directly, so the package script path matches the documented usage
+
+## Verification
+
+- `pnpm exec vitest run tests/ts-indexer.test.ts tests/cli.test.ts`
+- `pnpm exec vue-tsc --noEmit`
+- `pnpm cli -- index-ts . --out /tmp/<generated-dir>`
+
+## Dev Log
+
+| Date | What |
+|------|------|
+| 2026-04-12 | Added `index-ts` to the CLI, implemented AST-backed export extraction for TypeScript repos, generated stable SnipForge libraries with rerun cleanup, and covered the flow with targeted tests + a real CLI smoke run |

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { execFile as execFileCallback } from 'node:child_process'
 import { promisify } from 'node:util'
 import Fuse from 'fuse.js'
+import { indexTypeScriptRepo } from './ts-indexer.mjs'
 
 const execFile = promisify(execFileCallback)
 
@@ -159,6 +160,17 @@ export async function runCli(argv, io = {}, deps = {}) {
 
   try {
     const args = parseArgs(argv)
+
+    if (args.command === 'index-ts') {
+      const result = await indexTypeScriptRepo(args.repoPath, { outDir: args.outDir })
+      stdout.write([
+        `Indexed ${result.generatedCount} exports into ${result.manifestName}.`,
+        `Library: ${result.libraryPath}`,
+        `Removed stale entries: ${result.removedCount}`,
+      ].join('\n') + '\n')
+      return 0
+    }
+
     const libraryPath = args.libraryPath ?? cwd
     const library = await loadLibrary(libraryPath)
 
@@ -219,11 +231,16 @@ export function usage() {
     '  snipforge search <query> [--library <path>]',
     '  snipforge copy <query> [--library <path>]',
     '  snipforge copy --id <uuid> [--library <path>]',
+    '  snipforge index-ts <repo-path> [--out <library-path>]',
   ].join('\n') + '\n'
 }
 
 function parseArgs(argv) {
   const args = [...argv]
+  if (args[0] === '--') {
+    args.shift()
+  }
+
   const libraryFlagIndex = args.indexOf('--library')
   let libraryPath = null
   if (libraryFlagIndex >= 0) {
@@ -266,6 +283,26 @@ function parseArgs(argv) {
       throw new Error('Copy requires a query or --id')
     }
     return { command, query, libraryPath }
+  }
+
+  if (command === 'index-ts') {
+    const outFlagIndex = rest.indexOf('--out')
+    let outDir = null
+
+    if (outFlagIndex >= 0) {
+      outDir = rest[outFlagIndex + 1]
+      if (!outDir) {
+        throw new Error('Missing value for --out')
+      }
+      rest.splice(outFlagIndex, 2)
+    }
+
+    const repoPath = rest.join(' ').trim()
+    if (!repoPath) {
+      throw new Error('index-ts requires a repository path')
+    }
+
+    return { command, repoPath, outDir }
   }
 
   throw new Error(usage().trimEnd())
