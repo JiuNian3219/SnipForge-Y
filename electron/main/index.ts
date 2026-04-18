@@ -868,6 +868,32 @@ ipcMain.handle('library:updateFromOrigin', async (_, libraryId: number) => {
   }
 })
 
+ipcMain.handle('library:relinkWorkingCopy', async (_, libraryId: number) => {
+  if (typeof libraryId !== 'number') {
+    return { success: false, error: 'Invalid library ID' }
+  }
+
+  if (!win) return { success: false, error: 'No window' }
+
+  try {
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Choose Git-Backed Library Folder',
+      properties: ['openDirectory'],
+    })
+    if (result.canceled || !result.filePaths[0]) {
+      return { success: false, cancelled: true, error: 'cancelled' }
+    }
+
+    const relinked = await localLibrary.relinkOriginLibraryToFolder(libraryId, result.filePaths[0])
+    localLibrary.refreshFileWatchers()
+    win.webContents.send('commands:changed')
+    return { success: true, library: relinked.library, syncResult: relinked.syncResult }
+  } catch (error) {
+    console.error('Library relink working copy error:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
 ipcMain.handle('library:commitChanges', async (_, libraryId: number, message: string) => {
   if (typeof libraryId !== 'number' || typeof message !== 'string') {
     return { success: false, error: 'Invalid parameters' }

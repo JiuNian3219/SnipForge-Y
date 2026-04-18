@@ -65,6 +65,7 @@ interface Window {
       getWorkflowSummary: (libraryId: number) => Promise<{ success: boolean; summary?: import('../shared/types').LibraryGitWorkflowSummary; error?: string }>
       fetchOrigin: (libraryId: number) => Promise<import('../shared/types').LibraryWorkflowResult>
       updateFromOrigin: (libraryId: number) => Promise<import('../shared/types').LibraryWorkflowResult>
+      relinkWorkingCopy: (libraryId: number) => Promise<{ success: boolean; library?: any; syncResult?: any; cancelled?: boolean; error?: string }>
       commitChanges: (libraryId: number, message: string) => Promise<import('../shared/types').LibraryWorkflowResult>
       pushChanges: (libraryId: number) => Promise<import('../shared/types').LibraryWorkflowResult>
       openPullRequest: (libraryId: number) => Promise<import('../shared/types').LibraryWorkflowResult>

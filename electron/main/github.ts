@@ -1,5 +1,10 @@
-import { safeStorage } from 'electron'
+import { app, safeStorage } from 'electron'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import * as db from './database'
+import * as localLibrary from './local-library'
 import type { GitHubUser, LibraryManifest, LibraryPermission, LibraryCommand, SyncResult, Library, BulkPublishResult, DiscoveredLibrary } from '../../shared/types'
 import {
     buildLibraryCommandFileData,
@@ -17,6 +22,7 @@ const GITHUB_API = 'https://api.github.com'
 const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
 const DEVICE_CODE_URL = 'https://github.com/login/device/code'
 const ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token'
+const execFileAsync = promisify(execFile)
 
 // ── Token Management ──────────────────────────────────────────────
 
@@ -529,6 +535,30 @@ function parseRepoUrl(input: string): { owner: string; repo: string; subpath?: s
     throw new Error(`Invalid repo format: "${input}". Use "owner/repo" or a GitHub URL.`)
 }
 
+function getRepoCloneRootPath(baseDir: string, owner: string, repo: string): string {
+    return path.join(baseDir, 'working-copies', 'github', owner, repo)
+}
+
+async function ensureClonedWorkingCopy(owner: string, repo: string): Promise<string> {
+    const cloneRoot = getRepoCloneRootPath(app.getPath('userData'), owner, repo)
+
+    try {
+        await fs.access(cloneRoot)
+        await execFileAsync('git', ['-C', cloneRoot, 'rev-parse', '--is-inside-work-tree'])
+        return cloneRoot
+    } catch (error) {
+        try {
+            await fs.access(cloneRoot)
+        } catch {
+            await fs.mkdir(path.dirname(cloneRoot), { recursive: true })
+            await execFileAsync('git', ['clone', `https://github.com/${owner}/${repo}.git`, cloneRoot])
+            return cloneRoot
+        }
+
+        throw new Error(`Working copy target exists but is not a git repository: ${cloneRoot}`)
+    }
+}
+
 async function getRepoDefaultBranch(owner: string, repo: string): Promise<string> {
     const res = await githubFetch(`/repos/${owner}/${repo}`)
     if (!res.ok) {
@@ -615,60 +645,47 @@ export async function addWorkingCopyFromOrigin(
     const { owner, repo } = parsed
     const effectiveSubpath = subpath || parsed.subpath
 
-    // Build the stored identifier — includes subpath for multi-library repos
-    const githubRepo = effectiveSubpath ? `${owner}/${repo}/${effectiveSubpath}` : `${owner}/${repo}`
+    const context = await getRepoContext(owner, repo)
+    let resolvedSubpath = effectiveSubpath
 
-    // Check if already present (exact match on full identifier)
-    const existing = db.getLibraryByRepo(githubRepo)
-    if (existing) {
-        throw new Error(`Working copy already exists for ${githubRepo}`)
-    }
-
-    // If no subpath, check for multiple libraries before adding the working copy
     if (!effectiveSubpath) {
-        const context = await getRepoContext(owner, repo)
         const discovered = await discoverLibraries(owner, repo, context)
 
         if (discovered.length > 1) {
             return { needsPick: true, libraries: discovered }
         }
 
-        // 0 or 1 manifests — proceed with normal flow
         if (discovered.length === 1) {
-            // Single library — use scoped browse (efficient: 1 GraphQL call)
-            const scopedUrl = discovered[0].path ? `${owner}/${repo}/${discovered[0].path}` : `${owner}/${repo}`
-            const browseResult = await browseLibrary(scopedUrl, context)
-            return doAddWorkingCopy(githubRepo, browseResult)
+            resolvedSubpath = discovered[0].path || undefined
         }
-
-        // No manifests — add the working copy without syncing
-        const repoName = repo.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-        db.addLibrary(githubRepo, repoName, '', undefined, 'github', context.permission)
-        const library = db.getLibraryByRepo(githubRepo)!
-        return { library, syncResult: { added: 0, updated: 0, removed: 0, errors: [] } }
     }
 
-    // Subpath known — direct scoped add
-    const browseResult = await browseLibrary(githubRepo)
-    return doAddWorkingCopy(githubRepo, browseResult)
-}
+    const githubRepo = resolvedSubpath ? `${owner}/${repo}/${resolvedSubpath}` : `${owner}/${repo}`
+    const existing = db.getAllLibraries().find(library => library.origin?.url === githubRepo)
+    if (existing) {
+        throw new Error(`Working copy already exists for ${githubRepo}`)
+    }
 
-function doAddWorkingCopy(githubRepo: string, browseResult: Awaited<ReturnType<typeof browseLibrary>>): { library: Library; syncResult: SyncResult } {
-    const { manifest, manifestPath, commands, context } = browseResult
+    const cloneRoot = await ensureClonedWorkingCopy(owner, repo)
+    const libraryRoot = resolvedSubpath ? path.join(cloneRoot, resolvedSubpath) : cloneRoot
+    const result = await localLibrary.openLocalFolder(libraryRoot)
+    if ('needsPick' in result) {
+        return result
+    }
 
-    const libraryId = db.addLibrary(githubRepo, manifest.name, manifest.description, manifestPath, 'github', context.permission)
+    if (result.library.origin && result.library.origin.url !== githubRepo) {
+        throw new Error(`Local working copy is already linked to ${result.library.origin.url}`)
+    }
 
-    const localBodies = db.getLocalCommandBodies()
-    const toAdd = commands
-        .filter(({ command }) => !localBodies.has(command.body.trim()))
-        .map(({ path, command }) => ({
-            remotePath: path,
-            command: toIndexedLibraryCommandData(command),
-        }))
+    db.updateLibraryOrigin(result.library.id, githubRepo, context.branch)
+    db.updateLibraryPermission(result.library.id, context.permission)
 
-    const syncResult = db.syncRemoteCommands(libraryId, context.latestSha, toAdd, [], [])
-    const library = db.getLibraryByRepo(githubRepo)!
-    return { library, syncResult }
+    const library = db.getAllLibraries().find(item => item.id === result.library.id)
+    if (!library) {
+        throw new Error(`Working copy missing after add: ${githubRepo}`)
+    }
+
+    return { library, syncResult: result.syncResult }
 }
 
 export const subscribeToLibrary = addWorkingCopyFromOrigin

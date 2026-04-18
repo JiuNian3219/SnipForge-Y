@@ -58,7 +58,7 @@ export function describeLibraryChanges(library: Library): LibraryChangesSummary 
       return {
         headline: hasOrigin ? 'Git working copy unavailable' : 'Local-only library',
         detail: hasOrigin
-          ? 'This library has an origin, but the local folder is not currently inside a git work tree.'
+          ? 'This library has an origin, but the stored folder is not inside a git work tree. Relink it to the real repo-backed folder.'
           : 'No git working copy detected. Origin controls stay hidden until a remote-backed workflow exists.',
         tone: hasOrigin ? 'warning' : 'neutral',
         canSync,

@@ -368,6 +368,13 @@ export function updateLibraryManifest(libraryId: number, name: string, descripti
     `).run(name, description, manifestPath, libraryId)
 }
 
+export function updateLibraryOrigin(libraryId: number, originUrl: string | null, originRef: string | null): void {
+    if (!db) throw new Error("Database not initialized")
+    db.prepare(`
+        UPDATE libraries SET origin_url = ?, origin_ref = ? WHERE id = ?
+    `).run(originUrl, originRef, libraryId)
+}
+
 export function updateLibraryToLocalWorkingCopy(
     libraryId: number,
     localPath: string,

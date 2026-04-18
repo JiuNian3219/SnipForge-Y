@@ -47,6 +47,11 @@ interface CommandFormData {
     language: string
 }
 
+interface RemoteLibraryMigrationOptions {
+    runGit?: GitCommandRunner
+    resolveCloneSource?: (owner: string, repo: string) => string
+}
+
 const LIBRARY_ATTACHMENTS_DIR = 'attachments'
 const IMAGE_DATA_URI_RE = /^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=]+)$/i
 const IMAGE_TAG_RE = /<img\b[^>]*>/gi
@@ -451,7 +456,7 @@ export async function getLibraryGitWorkflowSummary(
     }
 
     if (workingTree.state === 'not_repo') {
-        const reason = 'This library has origin metadata, but the folder is not a git working copy yet.'
+        const reason = 'This library has origin metadata, but the stored folder is not a real git working copy. Relink it to the repo-backed folder.'
         return {
             supported: false,
             headline: 'Git working copy required',
@@ -1061,6 +1066,48 @@ function getWorkingCopyRootPath(baseDir: string, libraryRepo: string): string {
     return path.join(baseDir, 'working-copies', 'github', ...libraryRepo.split('/').filter(Boolean))
 }
 
+function parseOriginLibraryIdentifier(input: string): { owner: string; repo: string; subpath?: string } {
+    const parts = input.split('/').filter(Boolean)
+    if (parts.length < 2) {
+        throw new Error(`Invalid origin-backed library identifier: ${input}`)
+    }
+
+    const owner = parts[0]
+    const repo = parts[1]
+    const subpath = parts.length > 2 ? parts.slice(2).join('/') : undefined
+    return { owner, repo, subpath }
+}
+
+async function ensureGitWorkingCopy(
+    repoRoot: string,
+    cloneSource: string,
+    runGit: GitCommandRunner = runSystemGit
+): Promise<void> {
+    try {
+        await fs.access(repoRoot)
+        await runGit(['rev-parse', '--is-inside-work-tree'], repoRoot)
+        return
+    } catch (error) {
+        try {
+            await fs.access(repoRoot)
+        } catch {
+            await fs.mkdir(path.dirname(repoRoot), { recursive: true })
+            await runGit(['clone', cloneSource, repoRoot], path.dirname(repoRoot))
+            return
+        }
+
+        if (isGitMissingError(error)) {
+            throw new Error('System git is unavailable on this machine.')
+        }
+
+        if (isNotRepoError(error)) {
+            throw new Error(`Working copy target exists but is not a git repository: ${repoRoot}`)
+        }
+
+        throw error
+    }
+}
+
 function getManifestDirectory(manifestPath: string | null): string {
     if (!manifestPath || !manifestPath.includes('/')) {
         return ''
@@ -1662,11 +1709,16 @@ export async function reindexInitializedLocalLibraries(): Promise<Array<{ librar
     return results
 }
 
-export async function migrateRemoteLibrariesToLocalWorkingCopies(baseDir = app.getPath('userData')): Promise<{
+export async function migrateRemoteLibrariesToLocalWorkingCopies(
+    baseDir = app.getPath('userData'),
+    options: RemoteLibraryMigrationOptions = {}
+): Promise<{
     migrated: number
     skipped: number
     errors: string[]
 }> {
+    const runGit = options.runGit ?? runSystemGit
+    const resolveCloneSource = options.resolveCloneSource ?? ((owner: string, repo: string) => `https://github.com/${owner}/${repo}.git`)
     const libraries = db.getAllLibraries()
     const remoteLibraries = libraries.filter(library => library.type === 'github')
     const errors: string[] = []
@@ -1675,58 +1727,14 @@ export async function migrateRemoteLibrariesToLocalWorkingCopies(baseDir = app.g
 
     for (const library of remoteLibraries) {
         try {
-            const targetRoot = getWorkingCopyRootPath(baseDir, library.github_repo)
-            await fs.mkdir(targetRoot, { recursive: true })
+            const { owner, repo, subpath } = parseOriginLibraryIdentifier(library.github_repo)
+            const repoRoot = getWorkingCopyRootPath(baseDir, `${owner}/${repo}`)
+            await ensureGitWorkingCopy(repoRoot, resolveCloneSource(owner, repo), runGit)
 
-            const manifestPath = path.join(targetRoot, '.snipforge.json')
-            const manifest = {
-                snipforge: 'library',
-                name: library.name,
-                description: library.description || '',
-                format_version: '1.0',
-            }
-            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
-
-            const remoteCommands = db.getRemoteCommands(library.id)
-            for (const command of remoteCommands) {
-                const localPath = toWorkingCopyCommandPath(command.remote_path || '', library.manifest_path)
-                if (!localPath) {
-                    skipped += 1
-                    continue
-                }
-
-                const filePath = path.join(targetRoot, localPath)
-                await fs.mkdir(path.dirname(filePath), { recursive: true })
-                const existing = await readLibraryCommandFileMetadata(filePath)
-                const fileData = buildLibraryCommandFileData({
-                    title: command.title,
-                    body: command.body,
-                    description: command.description,
-                    tags: command.tags,
-                    language: command.language,
-                    created_at: existing?.created_at || command.created_at,
-                    updated_at: existing?.updated_at || command.updated_at,
-                }, existing?.id || createCommandId(), existing?.updated_at || command.updated_at)
-
-                await fs.writeFile(filePath, serializeLibraryCommandFile(fileData), 'utf8')
-
-                const pathChanged = localPath !== command.remote_path
-                if (pathChanged || command.source !== 'remote') {
-                    const updated = db.updateRemoteCommandById(command.id, {
-                        remote_path: localPath,
-                        title: command.title,
-                        body: command.body,
-                        description: command.description,
-                        tags: command.tags,
-                        language: command.language,
-                        created_at: command.created_at,
-                        updated_at: command.updated_at,
-                    })
-
-                    if (!updated) {
-                        throw new Error(`Failed to update command path for ${command.title}`)
-                    }
-                }
+            const targetRoot = subpath ? path.join(repoRoot, subpath) : repoRoot
+            const scanResult = await readFolderManifest(targetRoot)
+            if (!scanResult && library.manifest_path) {
+                throw new Error(`Missing .snipforge.json in ${targetRoot}`)
             }
 
             db.updateLibraryToLocalWorkingCopy(
@@ -1736,6 +1744,19 @@ export async function migrateRemoteLibrariesToLocalWorkingCopies(baseDir = app.g
                 library.last_synced_sha
             )
 
+            if (scanResult) {
+                db.updateLibraryManifest(
+                    library.id,
+                    scanResult.manifest.name,
+                    scanResult.manifest.description || '',
+                    scanResult.manifestPath
+                )
+            }
+
+            const syncResult = scanResult
+                ? await syncLocalLibrary(library.id, true)
+                : { added: 0, updated: 0, removed: 0, errors: [] }
+            skipped += syncResult.errors.length
             migrated += 1
         } catch (error) {
             errors.push(`Failed to migrate "${library.name}": ${(error as Error).message}`)
@@ -1835,6 +1856,77 @@ export async function openLocalFolder(folderPath: string): Promise<{ library: Li
     const libraries = await Promise.all(manifestPaths.map(buildDiscoveredLocalLibrary))
     libraries.sort((a, b) => a.path.localeCompare(b.path))
     return { needsPick: true, libraries }
+}
+
+export async function relinkOriginLibraryToFolder(libraryId: number, folderPath: string): Promise<{ library: Library; syncResult: SyncResult }> {
+    const library = db.getAllLibraries().find(item => item.id === libraryId)
+    if (!library) {
+        throw new Error(`Library not found: ${libraryId}`)
+    }
+
+    if (!library.origin) {
+        throw new Error('Only origin-backed libraries can be relinked')
+    }
+
+    const existing = db.getLibraryByRepo(folderPath)
+    if (existing && existing.id !== libraryId) {
+        throw new Error(`Already added: ${path.basename(folderPath)}`)
+    }
+
+    const scanResult = await scanLocalFolder(folderPath)
+    const relinkedLibrary: Library = {
+        ...library,
+        github_repo: folderPath,
+        type: 'local',
+        local_path: folderPath,
+        manifest_path: scanResult.manifestPath,
+        working_copy: {
+            local_path: folderPath,
+            manifest_path: scanResult.manifestPath,
+            materialized: true,
+        },
+    }
+    const context = await resolveGitWorkflowContext(relinkedLibrary)
+
+    if (context.gitUnavailable) {
+        throw new Error(context.gitError || 'System git is unavailable on this machine.')
+    }
+
+    if (context.workingTree.state === 'not_repo' || context.workingTree.state === 'no_working_copy') {
+        throw new Error('Choose a SnipForge library folder that lives inside a real git working tree.')
+    }
+
+    if (!context.githubRepo) {
+        throw new Error('The selected folder is inside a git repo, but no GitHub origin remote was detected.')
+    }
+
+    const expectedOrigin = parseOriginLibraryIdentifier(library.origin.url)
+    const actualOrigin = `${context.githubRepo.owner}/${context.githubRepo.repo}`.toLowerCase()
+    const expectedRepo = `${expectedOrigin.owner}/${expectedOrigin.repo}`.toLowerCase()
+    if (actualOrigin !== expectedRepo) {
+        throw new Error(`Selected folder points at ${context.githubRepo.owner}/${context.githubRepo.repo}, expected ${expectedOrigin.owner}/${expectedOrigin.repo}.`)
+    }
+
+    db.updateLibraryToLocalWorkingCopy(
+        libraryId,
+        folderPath,
+        library.origin.url,
+        library.origin.ref
+    )
+    db.updateLibraryManifest(
+        libraryId,
+        scanResult.manifest.name,
+        scanResult.manifest.description || '',
+        scanResult.manifestPath
+    )
+
+    const syncResult = await syncLocalLibrary(libraryId, true)
+    const updated = db.getAllLibraries().find(item => item.id === libraryId)
+    if (!updated) {
+        throw new Error(`Library not found after relink: ${libraryId}`)
+    }
+
+    return { library: updated, syncResult }
 }
 
 export async function setupDefaultWritableLocalLibrary(folderPath: string): Promise<{ library: Library; syncResult: SyncResult }> {

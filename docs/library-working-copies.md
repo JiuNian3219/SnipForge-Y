@@ -2,8 +2,40 @@
 
 Library Working Copies reframes SnipForge around one simple rule: every command lives in a local library folder, and some libraries may also have a Git remote origin. The app should treat commands as files in a working copy, not as separate "local" and "remote" command types.
 
+## Current Reference
+
+- this doc is now the current reference for shipped library behavior
+- `docs/remote-libraries.md` remains as legacy implementation history and migration context
+- the working-copy model is the source of truth for current product language
 
 ## Active Notes
+
+### Issue #52: guarantee real git working copies for origin-backed libraries
+
+Plan:
+- stop creating origin-linked records that only materialize files without a real git working tree
+- make add-from-origin land in a deterministic cloned repo-backed working copy
+- add a relink path for legacy migrated libraries whose stored folder is outside any git repo
+- tighten docs so local-only, git-backed, and legacy migrated states are described explicitly
+
+Final notes:
+- `electron/main/github.ts` now clones origin repos into deterministic app-support working-copy roots and links the library to the real local folder instead of creating subscription-style metadata records
+- `electron/main/local-library.ts` now migrates legacy `type: 'github'` libraries by cloning real repos, and exposes `relinkOriginLibraryToFolder()` so already-materialized non-repo libraries can be upgraded without touching SQLite manually
+- `electron/main/index.ts`, `electron/preload/index.ts`, and `src/components/SettingsModal.vue` now expose a relink action in the library Changes surface for blocked legacy libraries
+- `src/utils/library-changes.ts` now calls out relink-required legacy state instead of treating origin-backed plus non-repo as a normal steady state
+
+### Issue #50: move origin workflows to the library level
+
+Plan:
+- add explicit library-level fetch, update, commit, push, and pull-request actions to the Changes management surface instead of leaking origin behavior back onto command rows
+- drive those actions through system `git`, with clear blocked or fallback states for non-repo working copies, missing remotes, detached heads, missing upstream branches, and missing GitHub CLI
+- keep push gated to owner/curator-capable libraries while still letting consumer-oriented working copies commit locally and use a PR-oriented browser fallback
+
+Final notes:
+- `electron/main/local-library.ts` now resolves real git workflow context from the working copy, infers GitHub origin metadata from local remotes when possible, and exposes library-level fetch/update/commit/push/PR actions with explicit blocked results
+- `electron/main/index.ts`, `electron/preload/index.ts`, and `shared/types.ts` now carry a focused library workflow API for the renderer instead of the old command-row publish/unpublish contract
+- `src/components/SettingsModal.vue` now shows origin workflow actions inside the library Changes panel, including disabled-state reasons and a compare-page fallback when `gh` is unavailable
+- default keyboard shortcuts no longer reserve publish/unpublish bindings, which keeps the active surface aligned with the working-copy model
 
 ### Issue #48: library-level working tree status using system `git`
 
@@ -215,7 +247,7 @@ Do not add special command-level origin behavior unless absolutely necessary.
 
 | File | Why |
 |------|-----|
-| `docs/remote-libraries.md` | Existing remote model will need to be rewritten around working copies |
+| `docs/remote-libraries.md` | Legacy remote-library reference and migration history |
 | `docs/library-first-command-storage.md` | Needs alignment with the new library/origin model |
 | `electron/main/github.ts` | Remote flows likely shift from subscribe/sync semantics toward clone/fetch/status semantics |
 | `electron/main/local-library.ts` | Becomes the core library working-copy layer |
@@ -272,6 +304,19 @@ Deliverables:
 Verification:
 
 - the app can inspect working-copy changes without bundling a custom Git runtime
+
+## Issue Breakdown
+
+Tracked in GitHub issue [#51](https://github.com/ArtluxDM/SnipForge/issues/51).
+
+Implementation order:
+
+1. [#45](https://github.com/ArtluxDM/SnipForge/issues/45) Refactor library contracts around local-first working copies
+2. [#46](https://github.com/ArtluxDM/SnipForge/issues/46) Migrate existing remote-library data into local working copies
+3. [#47](https://github.com/ArtluxDM/SnipForge/issues/47) Simplify command rows to copy, edit, and delete only
+4. [#48](https://github.com/ArtluxDM/SnipForge/issues/48) Add library-level working tree status using system `git`
+5. [#49](https://github.com/ArtluxDM/SnipForge/issues/49) Add a library-level Changes surface for origin workflows
+6. [#50](https://github.com/ArtluxDM/SnipForge/issues/50) Move fetch, commit, push, and PR workflows to the library level
 
 ## Immediate Recommendation
 

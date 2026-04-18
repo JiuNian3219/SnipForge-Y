@@ -120,6 +120,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:fetchOrigin', libraryId),
     updateFromOrigin: (libraryId: number): Promise<LibraryWorkflowResult> =>
       ipcRenderer.invoke('library:updateFromOrigin', libraryId),
+    relinkWorkingCopy: (libraryId: number): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; cancelled?: boolean; error?: string }> =>
+      ipcRenderer.invoke('library:relinkWorkingCopy', libraryId),
     commitChanges: (libraryId: number, message: string): Promise<LibraryWorkflowResult> =>
       ipcRenderer.invoke('library:commitChanges', libraryId, message),
     pushChanges: (libraryId: number): Promise<LibraryWorkflowResult> =>
@@ -236,6 +238,7 @@ declare global {
         getWorkflowSummary: (libraryId: number) => Promise<{ success: boolean; summary?: LibraryGitWorkflowSummary; error?: string }>
         fetchOrigin: (libraryId: number) => Promise<LibraryWorkflowResult>
         updateFromOrigin: (libraryId: number) => Promise<LibraryWorkflowResult>
+        relinkWorkingCopy: (libraryId: number) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; cancelled?: boolean; error?: string }>
         commitChanges: (libraryId: number, message: string) => Promise<LibraryWorkflowResult>
         pushChanges: (libraryId: number) => Promise<LibraryWorkflowResult>
         openPullRequest: (libraryId: number) => Promise<LibraryWorkflowResult>

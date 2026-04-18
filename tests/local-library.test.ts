@@ -22,6 +22,7 @@ import {
     openLibraryPullRequest,
     pushLibraryChanges,
     reindexInitializedLocalLibraries,
+    relinkOriginLibraryToFolder,
     scanLocalFolder,
     setupDefaultWritableLocalLibrary,
     slugify,
@@ -32,6 +33,17 @@ import {
 let tmpDir: string
 const TINY_PNG_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2pKxQAAAAASUVORK5CYII='
 const execFileAsync = promisify(execFile)
+
+async function runGit(cwd: string, args: string[]): Promise<string> {
+    const { stdout } = await execFileAsync('git', ['-C', cwd, ...args])
+    return String(stdout)
+}
+
+async function initGitRepo(repoPath: string): Promise<void> {
+    await runGit(repoPath, ['init'])
+    await runGit(repoPath, ['config', 'user.name', 'SnipForge Tests'])
+    await runGit(repoPath, ['config', 'user.email', 'tests@snipforge.local'])
+}
 
 beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'snipforge-test-lib-'))
@@ -214,17 +226,6 @@ describe('scanLocalFolder', () => {
 })
 
 describe('library working tree status', () => {
-    async function runGit(cwd: string, args: string[]): Promise<string> {
-        const { stdout } = await execFileAsync('git', ['-C', cwd, ...args])
-        return String(stdout)
-    }
-
-    async function initGitRepo(repoPath: string): Promise<void> {
-        await runGit(repoPath, ['init'])
-        await runGit(repoPath, ['config', 'user.name', 'SnipForge Tests'])
-        await runGit(repoPath, ['config', 'user.email', 'tests@snipforge.local'])
-    }
-
     it('reports a clean state for a clean git-backed library', async () => {
         const repoRoot = path.join(tmpDir, 'clean-repo')
         await fs.mkdir(repoRoot, { recursive: true })
@@ -529,26 +530,41 @@ describe('library working tree status', () => {
 })
 
 describe('local library CRUD', () => {
-    it('migrates subscribed GitHub libraries into deterministic local working copies', async () => {
+    it('migrates subscribed GitHub libraries into deterministic local git working copies', async () => {
         const remoteRepo = 'ArtluxDM/snips/subdir'
-        const libraryId = db.addLibrary(remoteRepo, 'Remote Library', 'Remote desc', 'subdir/.snipforge.json', 'github', 'consumer')
+        const remoteRoot = path.join(tmpDir, 'remote.git')
+        const seedRoot = path.join(tmpDir, 'seed')
+        const libraryRoot = path.join(seedRoot, 'subdir')
+        await fs.mkdir(libraryRoot, { recursive: true })
+        await fs.writeFile(path.join(libraryRoot, '.snipforge.json'), JSON.stringify({
+            name: 'Remote Library',
+            description: 'Remote desc',
+            format_version: '1.0',
+        }))
+        await fs.writeFile(path.join(libraryRoot, 'hello-world.json'), JSON.stringify({
+            title: 'Hello World',
+            body: 'echo hello',
+            description: 'greeting',
+            tags: ['hello'],
+            language: 'bash',
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-02T00:00:00Z',
+        }))
 
-        db.syncRemoteCommands(libraryId, 'abc123', [
-            {
-                remotePath: 'subdir/hello-world.json',
-                command: {
-                    title: 'Hello World',
-                    body: 'echo hello',
-                    description: 'greeting',
-                    tags: '["hello"]',
-                    language: 'bash',
-                    created_at: '2026-01-01T00:00:00Z',
-                    updated_at: '2026-01-02T00:00:00Z',
-                }
-            }
-        ], [], [])
+        await initGitRepo(seedRoot)
+        await runGit(seedRoot, ['add', '.'])
+        await runGit(seedRoot, ['commit', '-m', 'initial'])
+        await runGit(tmpDir, ['init', '--bare', '--initial-branch=main', remoteRoot])
+        await runGit(seedRoot, ['remote', 'add', 'origin', remoteRoot])
+        await runGit(seedRoot, ['branch', '-M', 'main'])
+        await runGit(seedRoot, ['push', '--set-upstream', 'origin', 'main'])
 
-        const result = await migrateRemoteLibrariesToLocalWorkingCopies(tmpDir)
+        db.addLibrary(remoteRepo, 'Remote Library', 'Remote desc', 'subdir/.snipforge.json', 'github', 'consumer')
+
+        const result = await migrateRemoteLibrariesToLocalWorkingCopies(tmpDir, {
+            runGit: async (args, cwd) => ({ stdout: await runGit(cwd, args) }),
+            resolveCloneSource: () => remoteRoot,
+        })
         expect(result.migrated).toBe(1)
         expect(result.errors).toEqual([])
 
@@ -560,11 +576,9 @@ describe('local library CRUD', () => {
         expect(migrated.type).toBe('local')
         expect(migrated.github_repo).toBe(expectedRoot)
         expect(migrated.local_path).toBe(expectedRoot)
-        expect(migrated.origin).toEqual({
-            provider: 'github',
-            url: remoteRepo,
-            ref: 'abc123',
-        })
+        expect(migrated.origin?.provider).toBe('github')
+        expect(migrated.origin?.url).toBe(remoteRepo)
+        expect(typeof migrated.origin?.ref).toBe('string')
         expect(migrated.working_copy).toEqual({
             local_path: expectedRoot,
             manifest_path: '.snipforge.json',
@@ -584,6 +598,9 @@ describe('local library CRUD', () => {
         expect(migratedCommands).toHaveLength(1)
         expect(migratedCommands[0].remote_path).toBe('hello-world.json')
 
+        const status = await getLibraryWorkingTreeStatus(migrated)
+        expect(status.state).toBe('clean')
+
         const reindexResults = await reindexInitializedLocalLibraries()
         expect(reindexResults).toHaveLength(1)
         expect(reindexResults[0].result.errors).toEqual([])
@@ -591,6 +608,53 @@ describe('local library CRUD', () => {
         const rerun = await migrateRemoteLibrariesToLocalWorkingCopies(tmpDir)
         expect(rerun.migrated).toBe(0)
         expect(db.getAllLibraries()).toHaveLength(1)
+    })
+
+    it('relinks a legacy materialized origin-backed library to a real repo-backed folder', async () => {
+        const legacyRoot = path.join(tmpDir, 'legacy-copy')
+        await fs.mkdir(legacyRoot, { recursive: true })
+        await fs.writeFile(path.join(legacyRoot, '.snipforge.json'), JSON.stringify({
+            name: 'HomeLab Commands',
+            description: 'Legacy materialized copy',
+            format_version: '1.0',
+        }))
+
+        const libraryId = db.addLibrary(legacyRoot, 'HomeLab Commands', 'Legacy materialized copy', '.snipforge.json', 'local', 'consumer')
+        db.updateLibraryOrigin(libraryId, 'ArtluxDM/home-lab/homelab_snipforge_library', 'main')
+
+        const repoRoot = path.join(tmpDir, 'home-lab')
+        const libraryRoot = path.join(repoRoot, 'homelab_snipforge_library')
+        await fs.mkdir(libraryRoot, { recursive: true })
+        await fs.writeFile(path.join(libraryRoot, '.snipforge.json'), JSON.stringify({
+            name: 'HomeLab Commands',
+            description: 'Real repo-backed library',
+            format_version: '1.0',
+        }))
+        await fs.writeFile(path.join(libraryRoot, 'deploy.json'), JSON.stringify({
+            title: 'Deploy',
+            body: 'kubectl apply -k .',
+            tags: ['k8s'],
+        }))
+
+        await initGitRepo(repoRoot)
+        await runGit(repoRoot, ['add', '.'])
+        await runGit(repoRoot, ['commit', '-m', 'initial'])
+        await runGit(repoRoot, ['remote', 'add', 'origin', 'https://github.com/ArtluxDM/home-lab.git'])
+
+        const result = await relinkOriginLibraryToFolder(libraryId, libraryRoot)
+
+        expect(result.library.github_repo).toBe(libraryRoot)
+        expect(result.library.local_path).toBe(libraryRoot)
+        expect(result.library.origin).toEqual({
+            provider: 'github',
+            url: 'ArtluxDM/home-lab/homelab_snipforge_library',
+            ref: 'main',
+        })
+        expect(result.syncResult.errors).toEqual([])
+
+        const status = await getLibraryWorkingTreeStatus(result.library)
+        expect(status.state).toBe('clean')
+        expect(db.getRemoteCommands(libraryId).map(command => command.remote_path)).toEqual(['deploy.json'])
     })
 
     it('opens a nested library when the chosen folder only contains a manifest in a subdirectory', async () => {

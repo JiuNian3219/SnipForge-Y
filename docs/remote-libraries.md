@@ -1,5 +1,9 @@
 # Remote Libraries
 
+Legacy note:
+- `docs/library-working-copies.md` is now the current source of truth for shipped library behavior
+- this doc remains useful as implementation history for the older subscription-style remote model and the migration work that followed
+
 Remote Libraries let teams share command snippets via GitHub repositories. A curator maintains a repo with command files, and team members subscribe to pull those commands into their local SnipForge.
 
 ## How It Works

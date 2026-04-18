@@ -591,6 +591,15 @@
 
                   <div class="library-origin-actions">
                     <button
+                      v-if="managedLibrary.working_tree.state === 'not_repo'"
+                      class="library-action-btn subtle"
+                      :disabled="!!managedWorkflowBusy"
+                      title="Choose the real git-backed folder for this library"
+                      @click="handleRelinkWorkingCopy"
+                    >
+                      {{ managedWorkflowBusy === 'relink' ? 'Relinking...' : 'Relink Working Copy' }}
+                    </button>
+                    <button
                       class="library-action-btn subtle"
                       :disabled="!!managedWorkflowBusy || !workflowActionState.fetch.available"
                       :title="workflowActionState.fetch.reason || 'Fetch origin refs'"
@@ -1282,7 +1291,7 @@ const managedLibraryChangesSummary = computed(() => {
 })
 const managedLibraryWorkflowSummary = ref<LibraryGitWorkflowSummary | null>(null)
 const managedLibraryWorkflowError = ref('')
-const managedWorkflowBusy = ref<null | 'fetch' | 'update' | 'commit' | 'push' | 'pull_request'>(null)
+const managedWorkflowBusy = ref<null | 'fetch' | 'update' | 'relink' | 'commit' | 'push' | 'pull_request'>(null)
 const workflowActionState = computed(() => managedLibraryWorkflowSummary.value?.actions || {
   fetch: { available: false, reason: null },
   update: { available: false, reason: null },
@@ -1489,6 +1498,34 @@ async function handleFetchOrigin() {
 async function handleUpdateFromOrigin() {
   if (!managedLibrary.value) return
   await runManagedLibraryWorkflow('update', () => window.electronAPI.library.updateFromOrigin(managedLibrary.value!.id))
+}
+
+async function handleRelinkWorkingCopy() {
+  if (!managedLibrary.value || managedWorkflowBusy.value) return
+
+  managedWorkflowBusy.value = 'relink'
+  libraryError.value = ''
+
+  try {
+    const result = await window.electronAPI.library.relinkWorkingCopy(managedLibrary.value.id)
+    if (!result.success) {
+      if (!result.cancelled) {
+        libraryError.value = result.error || 'Unable to relink this working copy.'
+      }
+      return
+    }
+
+    await loadLibraries()
+    await loadManagedLibraryWorkflow(managedLibrary.value.id)
+    emit('libraries-changed')
+    syncMessage.value = `Relinked ${managedLibrary.value.name} to a real git working copy.`
+    syncMessageType.value = 'success'
+    clearSyncMessage()
+  } catch (e) {
+    libraryError.value = (e as Error).message
+  } finally {
+    managedWorkflowBusy.value = null
+  }
 }
 
 async function handleCommitLibraryChanges() {
