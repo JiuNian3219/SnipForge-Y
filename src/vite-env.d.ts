@@ -73,12 +73,9 @@ interface Window {
       updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => Promise<import('../shared/types').CommandMutationResult>
       deleteCommand: (id: number) => Promise<import('../shared/types').CommandMutationResult>
       deleteCommands: (ids: number[]) => Promise<import('../shared/types').BatchCommandMutationResult>
-      browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
       openLocal: () => Promise<{ success: boolean; library?: any; syncResult?: any; error?: string }>
       init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: any; syncResult?: any; error?: string }>
       getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
-      bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: import('../shared/types').BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
-      onBulkPublishProgress: (callback: (data: { result: import('../shared/types').BulkPublishResult; index: number; total: number }) => void) => () => void
       exportZip: (commandIds: number[], name: string, description: string) => Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }>
       onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => () => void
     }

@@ -10,6 +10,25 @@ Library Working Copies reframes SnipForge around one simple rule: every command 
 
 ## Active Notes
 
+### Issue #56: clean up legacy remote-library code after working-copy migration
+
+Plan:
+- remove stale command-level remote publish surfaces that no longer belong to the working-copy product model
+- trim dead IPC/preload/type exposure that only supported the old publish/browse flow and is no longer used by the renderer
+- keep intentionally retained compatibility paths explicit, especially the `subscribe` alias and legacy `RemoteCommand` type alias
+- add regression coverage around the surviving preload API so the active surface stays aligned with the library-level workflow model
+
+Final notes:
+- removed the dead command-level remote publish path from `electron/main/github.ts`, `electron/main/index.ts`, `electron/preload/index.ts`, and the renderer typings, including the unused `library:bulkPublish`, `library:browse`, and progress-event preload exposure
+- deleted the orphaned `src/components/BulkPublishModal.vue` component and pruned stale publish/unpublish CSS selectors from `src/App.vue`
+- kept the `subscribe` preload alias and `RemoteCommand` type alias on purpose as explicit compatibility shims while the shipped migration surface still recognizes legacy terminology
+- `tests/preload.test.ts` now asserts both the active working-copy API and the absence of the removed command-level publish/browse methods
+
+Verification:
+- `pnpm vitest run tests/preload.test.ts tests/library-changes.test.ts`
+- `pnpm exec vue-tsc --noEmit`
+
+
 ### Issue #54: harden legacy command and library migration paths
 
 Plan:

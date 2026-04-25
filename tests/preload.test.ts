@@ -40,7 +40,7 @@ describe('preload event subscriptions', () => {
         expect(removeListener).toHaveBeenCalledWith('window-shown', listener)
     })
 
-    it('exposes the library workflow API alongside the legacy subscribe alias', async () => {
+    it('exposes the active library workflow API alongside the legacy subscribe alias', async () => {
         await import('../electron/preload/index')
 
         const exposedApi = exposeInMainWorld.mock.calls[0]?.[1]
@@ -55,6 +55,7 @@ describe('preload event subscriptions', () => {
         await exposedApi.library.commitChanges(42, 'Save local edits')
         await exposedApi.library.pushChanges(42)
         await exposedApi.library.openPullRequest(42)
+        await exposedApi.library.exportZip([1, 2], 'My Library', 'Exported commands')
 
         expect(invoke).toHaveBeenCalledWith('library:addWorkingCopyFromOrigin', 'https://github.com/org/repo', 'sub/path')
         expect(invoke).toHaveBeenCalledWith('library:subscribe', 'https://github.com/org/repo', 'sub/path')
@@ -65,5 +66,17 @@ describe('preload event subscriptions', () => {
         expect(invoke).toHaveBeenCalledWith('library:commitChanges', 42, 'Save local edits')
         expect(invoke).toHaveBeenCalledWith('library:pushChanges', 42)
         expect(invoke).toHaveBeenCalledWith('library:openPullRequest', 42)
+        expect(invoke).toHaveBeenCalledWith('library:exportZip', [1, 2], 'My Library', 'Exported commands')
+    })
+
+    it('does not expose removed command-level remote publish APIs', async () => {
+        await import('../electron/preload/index')
+
+        const exposedApi = exposeInMainWorld.mock.calls[0]?.[1]
+        expect(exposedApi).toBeTruthy()
+
+        expect(exposedApi.library.bulkPublish).toBeUndefined()
+        expect(exposedApi.library.onBulkPublishProgress).toBeUndefined()
+        expect(exposedApi.library.browse).toBeUndefined()
     })
 })

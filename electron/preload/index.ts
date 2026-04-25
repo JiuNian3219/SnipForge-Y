@@ -5,7 +5,6 @@ import type {
   SyncResult,
   AuthStatus,
   GitHubUser,
-  BulkPublishResult,
   UpdateStatus,
   DiscoveredLibrary,
   DefaultWritableLibraryResult,
@@ -136,20 +135,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('library:deleteCommand', id),
     deleteCommands: (ids: number[]): Promise<BatchCommandMutationResult> =>
       ipcRenderer.invoke('library:deleteCommands', ids),
-    browse: (repoUrl: string): Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }> =>
-      ipcRenderer.invoke('library:browse', repoUrl),
     openLocal: (folderPath?: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }> =>
       ipcRenderer.invoke('library:openLocal', folderPath),
     init: (libraryId: number, name: string, description: string, subpath?: string): Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }> =>
       ipcRenderer.invoke('library:init', libraryId, name, description, subpath),
     getRepoFolders: (repoUrl: string): Promise<{ success: boolean; folders: string[]; error?: string }> =>
       ipcRenderer.invoke('library:getRepoFolders', repoUrl),
-    bulkPublish: (libraryId: number, commandIds: number[]): Promise<{ success: boolean; results: BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }> =>
-      ipcRenderer.invoke('library:bulkPublish', libraryId, commandIds),
-    onBulkPublishProgress: (callback: (data: { result: BulkPublishResult; index: number; total: number }) => void) => {
-      ipcRenderer.on('library:bulkPublishProgress', (_, data) => callback(data))
-      return () => { ipcRenderer.removeAllListeners('library:bulkPublishProgress') }
-    },
     exportZip: (commandIds: number[], name: string, description: string): Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }> =>
       ipcRenderer.invoke('library:exportZip', commandIds, name, description),
     onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => {
@@ -240,12 +231,9 @@ declare global {
         updateCommand: (id: number, updates: { title: string; body: string; description: string; tags: string; language: string }) => Promise<CommandMutationResult>
         deleteCommand: (id: number) => Promise<CommandMutationResult>
         deleteCommands: (ids: number[]) => Promise<BatchCommandMutationResult>
-        browse: (repoUrl: string) => Promise<{ success: boolean; manifest?: any; commands?: any[]; error?: string }>
         openLocal: (folderPath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; needsPick?: boolean; libraries?: DiscoveredLibrary[]; error?: string }>
         init: (libraryId: number, name: string, description: string, subpath?: string) => Promise<{ success: boolean; library?: Library; syncResult?: SyncResult; error?: string }>
         getRepoFolders: (repoUrl: string) => Promise<{ success: boolean; folders: string[]; error?: string }>
-        bulkPublish: (libraryId: number, commandIds: number[]) => Promise<{ success: boolean; results: BulkPublishResult[]; succeeded?: number; failed?: number; error?: string }>
-        onBulkPublishProgress: (callback: (data: { result: BulkPublishResult; index: number; total: number }) => void) => () => void
         exportZip: (commandIds: number[], name: string, description: string) => Promise<{ success: boolean; path?: string; commandCount?: number; error?: string }>
         onAutoSyncResult: (callback: (data: { timestamp: string; results: Array<{ libraryId: number; name: string; result: { added: number; updated: number; removed: number; errors: string[] } }> }) => void) => () => void
       }

@@ -150,15 +150,6 @@ export interface AuthStatus {
   user: GitHubUser | null
 }
 
-export interface BulkPublishResult {
-  commandId: number
-  title: string
-  success: boolean
-  path?: string
-  created?: boolean
-  error?: string
-}
-
 // Multi-library discovery
 export interface DiscoveredLibrary {
   name: string

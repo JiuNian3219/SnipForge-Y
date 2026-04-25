@@ -1461,7 +1461,6 @@ html, body, #app {
 
 /* Control buttons */
 .add-button,
-.bulk-publish-button,
 .help-button,
 .settings-button {
   background: none;
@@ -1481,14 +1480,12 @@ html, body, #app {
 }
 
 .add-button:focus-visible,
-.bulk-publish-button:focus-visible,
 .help-button:focus-visible,
 .settings-button:focus-visible {
   border-color: var(--accent);
 }
 
 .add-button:hover,
-.bulk-publish-button:hover,
 .help-button:hover,
 .settings-button:hover {
   background-color: var(--bg-surface);
@@ -1710,10 +1707,6 @@ html, body, #app {
 .command-actions button:hover {
   background-color: var(--border);
   color: var(--text-primary);
-}
-
-.command-actions .unpublish-btn:hover {
-  color: #e06c75;
 }
 
 /* Shared modal styles */
@@ -1968,78 +1961,6 @@ html, body, #app {
 }
 
 /* Notification Toast */
-/* Publish Modal */
-.publish-modal {
-  background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
-  min-width: 320px;
-  max-width: 400px;
-}
-
-.publish-modal h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: var(--text-primary);
-}
-
-.publish-description {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--text-tertiary);
-}
-
-.publish-library-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.publish-library-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 10px 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.publish-library-option:hover {
-  border-color: var(--accent);
-  background: var(--bg-hover);
-}
-
-.publish-library-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.publish-library-repo {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.publish-cancel {
-  width: 100%;
-  padding: 8px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.publish-cancel:hover {
-  background: var(--bg-surface);
-}
-
 .notification-toast {
   position: fixed;
   bottom: 24px;

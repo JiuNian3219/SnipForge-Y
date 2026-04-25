@@ -928,45 +928,6 @@ ipcMain.handle('library:getRepoFolders', async (_, repoUrl: string) => {
   }
 })
 
-ipcMain.handle('library:bulkPublish', async (_, libraryId: number, commandIds: number[]) => {
-  if (typeof libraryId !== 'number' || !Array.isArray(commandIds) || commandIds.length === 0) {
-    return { success: false, error: 'Invalid parameters', results: [] }
-  }
-  try {
-    // Fetch all commands from DB
-    const allCommands = db.getAllCommands()
-    const commandsToPublish = commandIds
-      .map(id => allCommands.find(c => c.id === id))
-      .filter((c): c is NonNullable<typeof c> => !!c)
-      .map(c => ({
-        id: c.id,
-        title: c.title,
-        body: c.body,
-        description: c.description || '',
-        tags: JSON.parse(c.tags || '[]'),
-        language: c.language || 'plaintext',
-      }))
-
-    if (commandsToPublish.length === 0) {
-      return { success: false, error: 'No valid commands found', results: [] }
-    }
-
-    const results = await github.bulkPublishCommands(libraryId, commandsToPublish, (result, index, total) => {
-      // Send progress updates to renderer
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('library:bulkPublishProgress', { result, index, total })
-      }
-    })
-
-    const succeeded = results.filter(r => r.success).length
-    const failed = results.filter(r => !r.success).length
-    return { success: true, results, succeeded, failed }
-  } catch (error) {
-    console.error('Library bulkPublish error:', error)
-    return { success: false, error: (error as Error).message, results: [] }
-  }
-})
-
 ipcMain.handle('library:openLocal', async (_, requestedFolderPath?: string) => {
   if (!win) return { success: false, error: 'No window' }
   try {
@@ -1153,19 +1114,6 @@ ipcMain.handle('library:exportZip', async (_, commandIds: number[], name: string
     return { success: true, path: result.filePath, commandCount: selected.length }
   } catch (error) {
     console.error('Library export error:', error)
-    return { success: false, error: (error as Error).message }
-  }
-})
-
-ipcMain.handle('library:browse', async (_, repoUrl: string) => {
-  if (typeof repoUrl !== 'string' || !repoUrl.trim()) {
-    return { success: false, error: 'Invalid repository URL' }
-  }
-  try {
-    const data = await github.browseLibrary(repoUrl)
-    return { success: true, ...data }
-  } catch (error) {
-    console.error('Library browse error:', error)
     return { success: false, error: (error as Error).message }
   }
 })
