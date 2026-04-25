@@ -957,16 +957,20 @@ function isInitializedLocalLibrary(library: Library | undefined): library is Lib
     return !!library && library.type === 'local' && !!library.manifest_path
 }
 
+function isWritableLocalLibrary(library: Library | undefined): library is Library {
+    return isInitializedLocalLibrary(library) && library.permission !== 'consumer'
+}
+
 export function getDefaultWritableLocalLibrary(): Library | null {
     const preferredId = settings.get<number | null>('library.defaultWritableLocalLibraryId')
     if (typeof preferredId === 'number') {
         const preferred = db.getAllLibraries().find(l => l.id === preferredId)
-        if (isInitializedLocalLibrary(preferred)) {
+        if (isWritableLocalLibrary(preferred)) {
             return preferred
         }
     }
 
-    const fallback = db.getAllLibraries().find(isInitializedLocalLibrary)
+    const fallback = db.getAllLibraries().find(isWritableLocalLibrary)
     if (fallback) {
         settings.set('library.defaultWritableLocalLibraryId', fallback.id)
         return fallback
@@ -1126,7 +1130,7 @@ function toWorkingCopyCommandPath(remotePath: string, manifestPath: string | nul
     return remotePath.startsWith(prefix) ? remotePath.slice(prefix.length) : remotePath
 }
 
-function resolveFileBackedLocalCommand(commandId: number): { command: db.Command; library: Library } | null {
+function resolveLibraryBackedCommand(commandId: number): { command: db.Command; library: Library } | null {
     const command = db.getAllCommands().find(c => c.id === commandId)
     if (!command || command.source !== 'remote' || !command.library_id || !command.remote_path) {
         return null
@@ -1138,6 +1142,15 @@ function resolveFileBackedLocalCommand(commandId: number): { command: db.Command
     }
 
     return { command, library }
+}
+
+function resolveWritableFileBackedCommand(commandId: number): { command: db.Command; library: Library } | null {
+    const target = resolveLibraryBackedCommand(commandId)
+    if (!target || !isWritableLocalLibrary(target.library)) {
+        return null
+    }
+
+    return target
 }
 
 async function readFolderManifest(folderPath: string): Promise<ScanResult | null> {
@@ -1303,17 +1316,10 @@ async function indexLocalLibrary(folderPath: string, options: { ensureManifest: 
 export async function createLocalLibraryCommand(command: CommandFormData): Promise<CommandMutationResult> {
     const library = getDefaultWritableLocalLibrary()
     if (!library) {
-        const id = db.addCommand({
-            title: command.title,
-            body: command.body,
-            description: command.description,
-            tags: command.tags,
-            language: command.language,
-            source: 'local',
-            library_id: null,
-            remote_path: null,
-        })
-        return { success: id > 0, mode: 'database' }
+        return {
+            success: false,
+            error: 'Choose a default writable library before creating commands.',
+        }
     }
 
     const fileName = await findUniqueCommandFileName(library.github_repo, command.title)
@@ -1327,29 +1333,17 @@ export async function createLocalLibraryCommand(command: CommandFormData): Promi
 
 export async function createLocalLibraryCommands(commands: CommandFormData[]): Promise<BatchCommandMutationResult> {
     if (commands.length === 0) {
-        return { success: true, mode: 'database', processed: 0, succeeded: 0, failed: 0, errors: [] }
+        return { success: true, mode: 'library', processed: 0, succeeded: 0, failed: 0, errors: [] }
     }
 
     const library = getDefaultWritableLocalLibrary()
     if (!library) {
-        db.addCommands(commands.map(command => ({
-            title: command.title,
-            body: command.body,
-            description: command.description,
-            tags: command.tags,
-            language: command.language,
-            source: 'local',
-            library_id: null,
-            remote_path: null,
-        })))
-
         return {
-            success: true,
-            mode: 'database',
+            success: false,
             processed: commands.length,
-            succeeded: commands.length,
-            failed: 0,
-            errors: [],
+            succeeded: 0,
+            failed: commands.length,
+            errors: ['Choose a default writable library before creating commands.'],
         }
     }
 
@@ -1395,8 +1389,26 @@ export async function createLocalLibraryCommands(commands: CommandFormData[]): P
 }
 
 export async function updateLocalLibraryCommand(commandId: number, updates: CommandFormData): Promise<CommandMutationResult> {
-    const target = resolveFileBackedLocalCommand(commandId)
+    const target = resolveWritableFileBackedCommand(commandId)
     if (!target) {
+        const readOnlyTarget = resolveLibraryBackedCommand(commandId)
+        if (readOnlyTarget) {
+            const library = getDefaultWritableLocalLibrary()
+            if (!library) {
+                return {
+                    success: false,
+                    error: 'Choose a default writable library before editing read-only library commands.',
+                }
+            }
+
+            const fileName = await findUniqueCommandFileName(library.github_repo, updates.title)
+            const createdAt = new Date().toISOString()
+            await writeCommandFile(library.github_repo, fileName, updates, createdAt, createCommandId())
+            const syncResult = await syncLocalLibrary(library.id, true)
+            const updatedLibrary = db.getAllLibraries().find(l => l.id === library.id) || library
+            return { success: true, mode: 'library', library: updatedLibrary, syncResult }
+        }
+
         const success = db.updateCommand(commandId, {
             title: updates.title,
             body: updates.body,
@@ -1452,8 +1464,16 @@ export async function updateLocalLibraryCommand(commandId: number, updates: Comm
 }
 
 export async function deleteLocalLibraryCommand(commandId: number): Promise<CommandMutationResult> {
-    const target = resolveFileBackedLocalCommand(commandId)
+    const target = resolveWritableFileBackedCommand(commandId)
     if (!target) {
+        const readOnlyTarget = resolveLibraryBackedCommand(commandId)
+        if (readOnlyTarget) {
+            return {
+                success: false,
+                error: 'Read-only library commands cannot be deleted from the cache. Remove the library or delete the command from a writable working copy instead.',
+            }
+        }
+
         const success = db.deleteCommand(commandId)
         return { success, mode: 'database' }
     }
@@ -1480,16 +1500,22 @@ export async function deleteLocalLibraryCommands(commandIds: number[]): Promise<
     const databaseIds: number[] = []
 
     for (const commandId of commandIds) {
-        const target = resolveFileBackedLocalCommand(commandId)
-        if (!target) {
-            databaseIds.push(commandId)
+        const writableTarget = resolveWritableFileBackedCommand(commandId)
+        if (writableTarget) {
+            libraryIds.add(writableTarget.library.id)
+            const deletions = fileDeletesByLibrary.get(writableTarget.library.id) || []
+            deletions.push(path.join(writableTarget.library.github_repo, writableTarget.command.remote_path as string))
+            fileDeletesByLibrary.set(writableTarget.library.id, deletions)
             continue
         }
 
-        libraryIds.add(target.library.id)
-        const deletions = fileDeletesByLibrary.get(target.library.id) || []
-        deletions.push(path.join(target.library.github_repo, target.command.remote_path as string))
-        fileDeletesByLibrary.set(target.library.id, deletions)
+        const readOnlyTarget = resolveLibraryBackedCommand(commandId)
+        if (readOnlyTarget) {
+            errors.push(`Cannot delete read-only library command "${readOnlyTarget.command.title}"`)
+            continue
+        }
+
+        databaseIds.push(commandId)
     }
 
     let succeeded = 0

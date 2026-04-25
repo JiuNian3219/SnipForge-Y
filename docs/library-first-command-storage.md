@@ -4,6 +4,20 @@ Library-First Command Storage makes libraries the default way commands exist in 
 
 ## Active Notes
 
+### Issue #53: finish SQLite demotion for library-first command storage
+
+Plan:
+- remove remaining command CRUD fallbacks that still treat SQLite rows as a normal write target once a command belongs to a library-backed flow
+- keep SQLite-only mutation paths isolated to explicit legacy DB-only compatibility, while making subscribed/read-only library commands duplicate into the default writable local library on edit instead of mutating cache rows
+- block destructive writes against read-only library cache rows, and update export/publish/library-management flows that still equate `source = 'local'` with "current local command"
+- refresh the schema/docs language so SQLite is documented as command index/cache plus app metadata, not canonical command storage
+
+Final notes:
+- command creation no longer falls back to SQLite rows when no writable local library exists; the app now returns an explicit default-library requirement instead of silently reintroducing DB-owned command truth
+- writable local libraries remain the only in-place command mutation target; subscribed/read-only library commands now duplicate into the default writable local library on edit, and delete against read-only cache rows is blocked
+- renderer/main flows that still treated `source = 'local'` as the definition of a current local command were updated to include local-library-backed indexed commands, so export/publish/library-management flows no longer privilege legacy DB-only rows
+- direct renderer CRUD IPC into SQLite was removed; library-backed command mutations now go through the library-first surface, while SQLite stays an indexed projection plus explicit legacy compatibility storage
+
 ### Issue #29: rich text library attachments
 
 Plan:

@@ -29,12 +29,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   database:{
     getAllCommands: (): Promise<Command[]> =>
       ipcRenderer.invoke('db:getAllCommands'),
-    updateCommand: (id: number, updates: Partial<Command>): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('db:updateCommand', id, updates),
-    deleteCommand: (id: number): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('db:deleteCommand', id),
-    addCommand: (command: Omit<Command, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; id?: number; error?: string }> =>
-      ipcRenderer.invoke('db:addCommand', command)
 },
   //clipboard methods
   clipboard : {
@@ -185,9 +179,6 @@ declare global {
     electronAPI: {
       database: {
         getAllCommands: () => Promise<Command[]>
-        updateCommand: (id: number, updates: Partial<Command>) => Promise<{ success: boolean; error?: string }>
-        deleteCommand: (id: number) => Promise<{ success: boolean; error?: string }>
-        addCommand: (command: Omit<Command, 'id' | 'created_at' | 'updated_at'>) => Promise<{ success: boolean; id?: number; error?: string }>
       },
       clipboard: {
         writeText: (text: string) => Promise<void>,

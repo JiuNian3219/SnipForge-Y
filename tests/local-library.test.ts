@@ -728,6 +728,20 @@ describe('local library CRUD', () => {
         expect(db.getAllLibraries()).toHaveLength(0)
     })
 
+    it('requires a default writable library before creating commands', async () => {
+        const result = await createLocalLibraryCommand({
+            title: 'No Library Yet',
+            body: 'echo nope',
+            description: '',
+            tags: '[]',
+            language: 'bash',
+        })
+
+        expect(result.success).toBe(false)
+        expect(result.error).toContain('default writable library')
+        expect(db.getAllCommands()).toHaveLength(0)
+    })
+
     it('writes created commands to disk with a stable id, safely renames on title change, then deletes the file', async () => {
         const setup = await setupDefaultWritableLocalLibrary(tmpDir)
         const createResult = await createLocalLibraryCommand({
@@ -928,6 +942,91 @@ describe('local library CRUD', () => {
         const commands = db.getRemoteCommands(setup.library.id)
         expect(commands).toHaveLength(2)
         expect(commands.map(command => command.title).sort()).toEqual(['Git Pull', 'Git Status'])
+    })
+
+    it('duplicates read-only library command edits into the default writable library', async () => {
+        const setup = await setupDefaultWritableLocalLibrary(tmpDir)
+        const consumerRoot = path.join(tmpDir, 'consumer-library')
+        await fs.mkdir(consumerRoot, { recursive: true })
+        await fs.writeFile(path.join(consumerRoot, '.snipforge.json'), JSON.stringify({
+            name: 'Consumer Library',
+            description: '',
+            format_version: '1.0',
+        }) + '\n')
+        await fs.writeFile(path.join(consumerRoot, 'read-only.json'), JSON.stringify({
+            snipforge: 'command',
+            id: '11111111-1111-1111-1111-111111111111',
+            title: 'Read Only Command',
+            body: 'echo upstream',
+            description: 'from subscribed library',
+            tags: ['remote'],
+            language: 'bash',
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        }, null, 2) + '\n')
+
+        const opened = await openLocalFolder(consumerRoot)
+        if ('needsPick' in opened) {
+            throw new Error('Expected consumer library to open directly')
+        }
+        db.updateLibraryPermission(opened.library.id, 'consumer')
+
+        const [readOnlyCommand] = db.getRemoteCommands(opened.library.id)
+        const result = await updateLocalLibraryCommand(readOnlyCommand.id, {
+            title: 'Forked Edit',
+            body: 'echo forked edit',
+            description: 'edited copy',
+            tags: '["forked"]',
+            language: 'bash',
+        })
+
+        expect(result.success).toBe(true)
+        expect(result.mode).toBe('library')
+
+        const originalFile = JSON.parse(await fs.readFile(path.join(consumerRoot, 'read-only.json'), 'utf8'))
+        expect(originalFile.title).toBe('Read Only Command')
+        expect(originalFile.body).toBe('echo upstream')
+
+        const defaultCommands = db.getRemoteCommands(setup.library.id)
+        expect(defaultCommands).toHaveLength(1)
+        expect(defaultCommands[0].title).toBe('Forked Edit')
+        expect(defaultCommands[0].body).toBe('echo forked edit')
+        expect(defaultCommands[0].remote_path).toBe('forked-edit.json')
+    })
+
+    it('blocks deleting read-only library cache rows', async () => {
+        await setupDefaultWritableLocalLibrary(tmpDir)
+        const consumerRoot = path.join(tmpDir, 'consumer-library')
+        await fs.mkdir(consumerRoot, { recursive: true })
+        await fs.writeFile(path.join(consumerRoot, '.snipforge.json'), JSON.stringify({
+            name: 'Consumer Library',
+            description: '',
+            format_version: '1.0',
+        }) + '\n')
+        await fs.writeFile(path.join(consumerRoot, 'read-only.json'), JSON.stringify({
+            snipforge: 'command',
+            id: '22222222-2222-2222-2222-222222222222',
+            title: 'Read Only Command',
+            body: 'echo upstream',
+            description: 'from subscribed library',
+            tags: ['remote'],
+            language: 'bash',
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        }, null, 2) + '\n')
+
+        const opened = await openLocalFolder(consumerRoot)
+        if ('needsPick' in opened) {
+            throw new Error('Expected consumer library to open directly')
+        }
+        db.updateLibraryPermission(opened.library.id, 'consumer')
+
+        const [readOnlyCommand] = db.getRemoteCommands(opened.library.id)
+        const result = await deleteLocalLibraryCommand(readOnlyCommand.id)
+
+        expect(result.success).toBe(false)
+        expect(result.error).toContain('Read-only library commands cannot be deleted')
+        expect(db.getRemoteCommands(opened.library.id)).toHaveLength(1)
     })
 
     it('falls back to database CRUD for legacy DB-only commands', async () => {

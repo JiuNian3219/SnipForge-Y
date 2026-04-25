@@ -12,9 +12,6 @@ interface Window {
   electronAPI: {
     database: {
       getAllCommands: () => Promise<any[]>
-      updateCommand: (id: number, updates: any) => Promise<{ success: boolean; error?: string }>
-      deleteCommand: (id: number) => Promise<{ success: boolean; error?: string }>
-      addCommand: (command: any) => Promise<{ success: boolean; id?: number; error?: string }>
     }
     clipboard: {
       writeText: (text: string) => Promise<void>

@@ -922,6 +922,7 @@ interface Props {
     language?: string
     source?: string
     library_id?: number | null
+    remote_path?: string | null
     created_at: string
     updated_at: string
   }>
@@ -1238,11 +1239,29 @@ const syncMessage = ref('')
 const syncMessageType = ref<'success' | 'error'>('success')
 const defaultLibraryPicking = ref(false)
 const defaultLibraryError = ref('')
+
+function isWritableLocalLibrary(library: Library | null | undefined): library is Library {
+  return !!library && library.type === 'local' && !!library.manifest_path && library.permission !== 'consumer'
+}
+
+function isLocallyManagedCommand(command: Props['commands'][number]): boolean {
+  if (command.source === 'local' && !command.library_id && !command.remote_path) {
+    return true
+  }
+
+  if (command.source !== 'remote' || !command.library_id) {
+    return false
+  }
+
+  const library = libraries.value.find(lib => lib.id === command.library_id)
+  return !!library && library.type === 'local' && library.permission !== 'consumer'
+}
+
 const defaultWritableLibrary = computed(() => {
   const rawId = settings.value['library.defaultWritableLocalLibraryId']
   const libraryId = typeof rawId === 'number' ? rawId : null
   if (libraryId === null) return null
-  return libraries.value.find(lib => lib.id === libraryId && lib.type === 'local' && !!lib.manifest_path) || null
+  return libraries.value.find(lib => lib.id === libraryId && isWritableLocalLibrary(lib)) || null
 })
 const selectedLibraryId = ref<number | null>(null)
 const managedLibrary = computed(() => {
@@ -1262,7 +1281,7 @@ const managedLibraryCommands = computed(() => {
   return props.commands.filter(command => command.library_id === managedLibrary.value?.id)
 })
 const managedAvailableTags = computed(() => getAllTags(managedLibraryCommands.value))
-const canDeleteManagedCommands = computed(() => managedLibrary.value?.type === 'local')
+const canDeleteManagedCommands = computed(() => isWritableLocalLibrary(managedLibrary.value))
 const canImportIntoManagedLibrary = computed(() => {
   return !!managedLibrary.value && managedLibrary.value.id === defaultWritableLibrary.value?.id
 })
@@ -1759,7 +1778,7 @@ function openExportLibraryModal() {
     : []
   const count = ids.length > 0
     ? ids.length
-    : props.commands.filter(c => c.source === 'local').length
+    : props.commands.filter(command => isLocallyManagedCommand(command)).length
 
   exportLibraryModal.value = {
     visible: true,

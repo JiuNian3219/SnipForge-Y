@@ -27,6 +27,8 @@ SnipForge is a desktop app (Electron + Vue 3 + TypeScript) for saving, searching
 
 **Context management.** For large features, split into two issues: backend (#N-backend) and frontend (#N-frontend). Backend session handles main process, SQLite, IPC, types. Frontend session starts fresh with clean context and handles Vue components, styles, visual verification. This avoids hallucinations from context pressure. Chrome DevTools MCP is available directly for screenshots and visual verification (`pnpm dev:debug`). See `.claude/README.md` for available agents.
 
+**Scratch notes.** Temporary working notes may live in repo-local `temp*.md` files while a task is in progress. These files are scratch only, are git-ignored, and should be removed after the task is complete unless the user explicitly asks to keep or promote them into real docs.
+
 ## Tech Stack
 
 - Desktop: Electron + Vue 3 + Vite + TypeScript

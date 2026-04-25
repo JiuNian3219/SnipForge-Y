@@ -433,6 +433,19 @@ function isValidCommandBatch(value: unknown): value is Array<{ title: string; bo
   )
 }
 
+function isLocallyManagedCommand(command: db.Command, libraries: db.Library[]): boolean {
+  if (command.source === 'local' && command.library_id === null && command.remote_path === null) {
+    return true
+  }
+
+  if (command.source !== 'remote' || !command.library_id) {
+    return false
+  }
+
+  const library = libraries.find(item => item.id === command.library_id)
+  return !!library && library.type === 'local' && library.permission !== 'consumer'
+}
+
 // IPC handlers for database operations
 ipcMain.handle('db:getAllCommands', async () => {
   try {
@@ -440,58 +453,6 @@ ipcMain.handle('db:getAllCommands', async () => {
   } catch (error) {
     console.error('Error fetching commands from database:', error)
     return [] // Return an empty array on error to avoid breaking the renderer.
-  }
-})
-// update command
-ipcMain.handle('db:updateCommand', async (_, id: number, updates: Partial<db.Command>) => {
-  if (typeof id !== 'number' || !isValidCommandUpdate(updates)) {
-    return { success: false, error: 'Invalid parameters' }
-  }
-  try {
-    const success = db.updateCommand(id, updates)
-    if (success) {
-      console.log('Command updated successfully')
-      return { success: true }
-    }else {
-      console.log('No command found with the given ID')
-      return { success: false, error: 'No command found' }
-    }
-  } catch (error) {
-    console.error('Error updating command:', error)
-    return { success: false, error: error.message }
-  }
-})
-// delete command
-ipcMain.handle('db:deleteCommand', async (_, id: number) => {
-  if (typeof id !== 'number') {
-    return { success: false, error: 'Invalid ID' }
-  }
-  try {
-    const success = db.deleteCommand(id)
-    if (success) {
-      console.log('Command deleted successfully')
-      return { success: true }
-    }else {
-      console.log('No command found with the given ID')
-      return { success: false, error: 'No command found' }
-    }
-  } catch (error) {
-    console.error('Error deleting command:', error)
-    return { success: false, error: error.message }
-  }
-})
-// add command
-ipcMain.handle('db:addCommand', async (_, command: any) => {
-  if (!isValidCommandUpdate(command) || typeof command.title !== 'string' || typeof command.body !== 'string') {
-    return { success: false, error: 'Invalid command data' }
-  }
-  try {
-    const newId = db.addCommand(command)
-    console.log('Command added successfully with ID:', newId)
-    return { success: true, id: newId }
-  } catch (error) {
-    console.error('Error adding command:', error)
-    return { success: false, error: error.message }
   }
 })
 // IPC handlers for writting to clipboard.
@@ -1143,9 +1104,10 @@ ipcMain.handle('library:exportZip', async (_, commandIds: number[], name: string
   try {
     // Fetch commands from DB
     const allCommands = db.getAllCommands()
+    const libraries = db.getAllLibraries()
     const selected = commandIds.length > 0
       ? allCommands.filter(cmd => commandIds.includes(cmd.id))
-      : allCommands.filter(cmd => cmd.source === 'local') // default: all local commands
+      : allCommands.filter(cmd => isLocallyManagedCommand(cmd, libraries))
 
     if (selected.length === 0) {
       return { success: false, error: 'No commands to export' }

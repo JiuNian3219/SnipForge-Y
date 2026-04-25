@@ -135,6 +135,19 @@ interface Props {
 
 const props = defineProps<Props>()
 
+function isLocallyManagedCommand(command: CommandWithTags): boolean {
+  if (command.source === 'local' && command.library_id === null && command.remote_path === null) {
+    return true
+  }
+
+  if (command.source !== 'remote' || !command.library_id) {
+    return false
+  }
+
+  const library = props.libraries.find(item => item.id === command.library_id)
+  return !!library && library.type === 'local' && library.permission !== 'consumer'
+}
+
 const emit = defineEmits<{
   cancel: []
   done: []
@@ -152,9 +165,9 @@ const progressTotal = ref(0)
 const selectedFilterTags = ref<string[]>([])
 const showFilterDropdown = ref(false)
 
-// Only show local commands
+// Only show commands managed by a local library (plus explicit legacy DB-only rows)
 const localCommands = computed(() =>
-  props.commands.filter(c => c.source === 'local')
+  props.commands.filter(command => isLocallyManagedCommand(command))
 )
 
 // Available tags from local commands
