@@ -8,7 +8,9 @@
       <template #default="{ item: command }">
         <div
           class="command-list-item"
-          :class="{ selected: isSelected(command.id) }"
+          :class="{
+            selected: isSelected(command.id),
+          }"
           @click="$emit('toggle', command.id)"
         >
           <div class="checkbox-container">
@@ -21,15 +23,18 @@
           </div>
 
           <div class="command-details">
-            <div class="command-title">{{ command.title }}</div>
+            <div class="command-title-row">
+              <div class="command-title">{{ command.title }}</div>
+              <span v-if="command.language" class="command-language">{{ command.language }}</span>
+            </div>
             <div v-if="command.description" class="command-description">
               {{ command.description }}
             </div>
             <div class="command-meta">
-              <span class="command-language">{{ command.language }}</span>
               <span v-if="command.tagsArray.length > 0" class="command-tags">
                 {{ command.tagsArray.join(', ') }}
               </span>
+              <span class="command-updated">Updated {{ formatTimestamp(command.updated_at) }}</span>
             </div>
           </div>
         </div>
@@ -37,7 +42,8 @@
     </VList>
 
     <div v-else class="empty-state">
-      {{ emptyMessage }}
+      <div class="empty-state-title">{{ emptyTitle }}</div>
+      <p class="empty-state-message">{{ emptyMessage }}</p>
     </div>
   </div>
 </template>
@@ -51,8 +57,8 @@ interface Command {
   body: string
   description?: string
   tags: string
-  tagsArray: string[] // Pre-parsed tags
-  tagsNormalized: string[] // Pre-normalized (lowercase) for filtering
+  tagsArray: string[]
+  tagsNormalized: string[]
   language?: string
   created_at: string
   updated_at: string
@@ -61,27 +67,33 @@ interface Command {
 interface Props {
   commands: Command[]
   selectedIds: number[]
+  emptyTitle?: string
   emptyMessage?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  emptyMessage: 'No commands available'
+  emptyTitle: 'No commands here yet',
+  emptyMessage: 'Commands in this library will show up here.'
 })
 
 defineEmits<{
   toggle: [id: number]
 }>()
 
-const isSelected = (id: number): boolean => {
+function isSelected(id: number): boolean {
   return props.selectedIds.includes(id)
+}
+
+function formatTimestamp(timestamp: string): string {
+  return new Date(timestamp).toLocaleDateString()
 }
 </script>
 
 <style scoped>
 .command-list {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-input) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -97,10 +109,10 @@ const isSelected = (id: number): boolean => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: all 0.2s;
-  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s, box-shadow 0.2s, border-color 0.2s;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
 }
 
 .command-list-item:last-child {
@@ -108,11 +120,14 @@ const isSelected = (id: number): boolean => {
 }
 
 .command-list-item:hover {
-  background: var(--bg-hover);
+  background: color-mix(in srgb, var(--bg-hover) 72%, transparent);
 }
 
 .command-list-item.selected {
-  background: var(--accent-glow);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .checkbox-container {
@@ -163,46 +178,96 @@ const isSelected = (id: number): boolean => {
   min-width: 0;
 }
 
+.command-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
 .command-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.command-language {
+  flex-shrink: 0;
+  text-transform: capitalize;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
 }
 
 .command-description {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .command-meta {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   font-size: 12px;
   color: var(--text-tertiary);
 }
 
-.command-language {
-  text-transform: capitalize;
-}
-
-.command-tags {
+.command-tags,
+.command-updated {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.command-list-item.selected .command-title,
+.command-list-item.selected .command-updated {
+  color: var(--text-primary);
+}
+
 .empty-state {
-  padding: 40px 20px;
+  height: 100%;
+  min-height: 240px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-align: center;
-  color: var(--text-tertiary);
-  font-size: 14px;
+}
+
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.empty-state-message {
+  margin: 0;
+  max-width: 320px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .command-meta,
+  .command-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

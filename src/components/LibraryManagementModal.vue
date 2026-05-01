@@ -2,34 +2,31 @@
   <div v-if="show && library" class="library-management-modal-overlay" @click.self="handleClose">
     <div class="library-management-modal" @click="closeDropdowns">
       <div class="library-management-modal-header">
-        <div class="library-management-copy">
+        <div class="library-management-header-main">
           <div class="library-management-title-row">
             <h3>{{ library.name }}</h3>
-            <span
-              v-if="defaultWritableLibrary?.id === library.id"
-              class="library-role-badge default"
-            >Default writable</span>
+            <div class="library-state-badges">
+              <span
+                v-for="badge in headerBadges"
+                :key="badge.label"
+                class="library-state-badge"
+                :class="badge.tone"
+              >
+                {{ badge.label }}
+              </span>
+            </div>
           </div>
-          <p class="library-management-path">{{ library.github_repo }}</p>
+          <p class="library-management-path">{{ displayPath }}</p>
           <p class="library-management-note">{{ managementContextNote }}</p>
         </div>
-        <button class="library-management-close" @click="handleClose" aria-label="Close library management">×</button>
-      </div>
 
-      <div class="library-changes-panel">
-        <div class="library-changes-header">
-          <div class="library-changes-copy">
-            <h5>Changes</h5>
-            <p class="library-changes-note">
-              {{ changesSummary.headline }}. {{ changesSummary.detail }}
-            </p>
-          </div>
-          <div class="library-changes-actions">
+        <div class="library-management-header-controls">
+          <div class="library-header-actions">
             <button
               class="library-action-btn subtle"
               @click="$emit('refresh')"
               :disabled="syncing"
-              title="Refresh working tree status"
+              title="Refresh library status"
             >
               Refresh
             </button>
@@ -40,194 +37,7 @@
               :disabled="syncing"
               :title="changesSummary.syncTitle"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
               {{ syncing ? 'Syncing...' : 'Sync' }}
-            </button>
-          </div>
-        </div>
-
-        <div class="library-changes-grid">
-          <div class="library-change-card">
-            <span class="library-change-label">Origin</span>
-            <span class="library-change-value">{{ library.origin ? 'GitHub' : 'Local only' }}</span>
-            <span class="library-change-meta">
-              {{ library.origin ? library.origin.url : 'No remote origin configured for this library.' }}
-            </span>
-            <span v-if="library.origin?.ref" class="library-change-meta">Ref: {{ library.origin.ref }}</span>
-          </div>
-
-          <div class="library-change-card">
-            <span class="library-change-label">Working tree</span>
-            <span class="library-change-value" :class="`library-change-value--${changesSummary.tone}`">
-              {{ workingTreeLabel }}
-            </span>
-            <span class="library-change-meta">{{ changesSummary.detail }}</span>
-            <span v-if="library.working_tree.checked_at" class="library-change-meta">
-              Checked {{ formatSyncTime(library.working_tree.checked_at) }}
-            </span>
-          </div>
-
-          <div
-            v-if="library.working_tree.state === 'dirty' || library.working_tree.state === 'clean'"
-            class="library-change-card library-change-card--counts"
-          >
-            <span class="library-change-label">File summary</span>
-            <div class="library-change-counts">
-              <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> modified</span>
-              <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> new</span>
-              <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> deleted</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="library.origin" class="library-origin-panel">
-          <div class="library-origin-header">
-            <div class="library-changes-copy">
-              <h5>Origin workflow</h5>
-              <p v-if="workflowSummary" class="library-changes-note">
-                {{ workflowSummary.headline }}. {{ workflowSummary.detail }}
-              </p>
-              <p v-else-if="workflowError" class="library-changes-note library-changes-note--danger">
-                {{ workflowError }}
-              </p>
-              <p v-else class="library-changes-note">
-                Checking git-backed workflow support for this library.
-              </p>
-            </div>
-          </div>
-
-          <div class="library-changes-grid">
-            <div class="library-change-card">
-              <span class="library-change-label">Remote</span>
-              <span class="library-change-value">{{ workflowSummary?.remote_name || 'Unavailable' }}</span>
-              <span class="library-change-meta">{{ library.origin.url }}</span>
-            </div>
-
-            <div class="library-change-card">
-              <span class="library-change-label">Branch</span>
-              <span class="library-change-value">{{ workflowSummary?.current_branch || 'Detached / unknown' }}</span>
-              <span class="library-change-meta">Base: {{ workflowSummary?.default_branch || 'Unknown' }}</span>
-              <span class="library-change-meta">
-                {{ workflowSummary?.has_upstream ? 'Tracks an upstream branch.' : 'No upstream branch configured.' }}
-              </span>
-            </div>
-          </div>
-
-          <div class="library-origin-actions">
-            <button
-              v-if="library.working_tree.state === 'not_repo'"
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy"
-              title="Choose the real git-backed folder for this library"
-              @click="$emit('relink')"
-            >
-              {{ workflowBusy === 'relink' ? 'Relinking...' : 'Relink Working Copy' }}
-            </button>
-            <button
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy || !workflowActionState.fetch.available"
-              :title="workflowActionState.fetch.reason || 'Fetch origin refs'"
-              @click="$emit('fetch-origin')"
-            >
-              {{ workflowBusy === 'fetch' ? 'Fetching...' : 'Fetch' }}
-            </button>
-            <button
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy || !workflowActionState.update.available"
-              :title="workflowActionState.update.reason || 'Fast-forward this working copy from origin'"
-              @click="$emit('update-origin')"
-            >
-              {{ workflowBusy === 'update' ? 'Updating...' : 'Update' }}
-            </button>
-            <button
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy || !workflowActionState.commit.available"
-              :title="workflowActionState.commit.reason || 'Commit local changes in this library'"
-              @click="$emit('commit')"
-            >
-              {{ workflowBusy === 'commit' ? 'Committing...' : 'Commit' }}
-            </button>
-            <button
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy || !workflowActionState.push.available"
-              :title="workflowActionState.push.reason || 'Push the current branch to origin'"
-              @click="$emit('push')"
-            >
-              {{ workflowBusy === 'push' ? 'Pushing...' : 'Push' }}
-            </button>
-            <button
-              class="library-action-btn subtle"
-              :disabled="!!workflowBusy || !workflowActionState.pull_request.available"
-              :title="workflowActionState.pull_request.reason || 'Open a pull request from this branch'"
-              @click="$emit('pull-request')"
-            >
-              {{ workflowBusy === 'pull_request' ? 'Opening...' : 'Pull Request' }}
-            </button>
-          </div>
-
-          <p
-            v-if="workflowActionNote"
-            class="library-origin-note"
-            :class="{ 'library-origin-note--warning': !!workflowSummaryReason }"
-          >
-            {{ workflowActionNote }}
-          </p>
-        </div>
-      </div>
-
-      <div class="management-controls">
-        <div class="controls-row">
-          <div class="bulk-selection">
-            <input
-              type="checkbox"
-              class="select-all-checkbox"
-              :checked="isAllSelected"
-              :indeterminate="isIndeterminate"
-              @change="toggleSelectAll"
-            />
-            <span class="selection-counter" :class="{ muted: selectedCommandIds.length === 0 }">
-              {{ selectedCommandIds.length }} selected
-            </span>
-            <button
-              @click.stop="toggleManagementFilterDropdown"
-              :class="['management-filter-button', { active: selectedManagementTags.length > 0 }]"
-              title="Filter by tags"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
-              </svg>
-            </button>
-
-            <div v-if="showManagementFilterDropdown" class="filter-dropdown" @click.stop>
-              <TagSelector
-                :available-tags="availableTags"
-                :selected-tags="selectedManagementTags"
-                title="Filter by Tags"
-                @toggle="toggleManagementTag"
-                @clear-all="clearManagementTags"
-              />
-            </div>
-          </div>
-
-          <div class="spacer"></div>
-
-          <div class="action-buttons">
-            <button
-              v-if="canDeleteManagedCommands"
-              @click="handleBulkDelete"
-              :disabled="selectedCommandIds.length === 0"
-              class="action-button delete-icon-button"
-              title="Delete selected"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6h18"></path>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-              </svg>
             </button>
             <button
               v-if="canImportIntoManagedLibrary"
@@ -236,33 +46,276 @@
             >
               Import
             </button>
-            <div class="export-dropdown-wrap" @click.stop>
-              <button
-                @click="toggleExportDropdown"
-                :disabled="selectedCommandIds.length === 0"
-                class="action-button export-button"
-              >
-                Export
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m6 9 6 6 6-6"></path>
-                </svg>
-              </button>
-              <div v-if="showExportDropdown" class="export-dropdown">
-                <button class="export-dropdown-item" @click="handleExportBundle">As Bundle (.json)</button>
-                <button class="export-dropdown-item" @click="handleExportAsLibrary">As Library (.zip)</button>
-              </div>
-            </div>
           </div>
+          <button class="library-management-close" @click="handleClose" aria-label="Close library management">×</button>
         </div>
       </div>
 
-      <div class="command-list-container">
-        <CommandList
-          :commands="filteredManagementCommands"
-          :selected-ids="selectedCommandIds"
-          :empty-message="managementEmptyMessage"
-          @toggle="toggleCommandSelection"
-        />
+      <div class="library-workspace">
+        <section class="workspace-pane workspace-pane--list">
+          <div class="workspace-pane-header workspace-pane-header--list">
+            <div>
+              <h4>Commands</h4>
+              <p>{{ commandListNote }}</p>
+            </div>
+
+            <div class="selection-summary" :class="{ 'selection-summary--active': hasSelection }">
+              <input
+                type="checkbox"
+                class="select-all-checkbox"
+                :checked="isAllSelected"
+                :indeterminate="isIndeterminate"
+                @change="toggleSelectAll"
+              />
+              <div class="selection-copy">
+                <span class="selection-count">{{ selectionSummaryTitle }}</span>
+                <span class="selection-subcopy">{{ selectionSummaryDetail }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace-pane-toolbar">
+            <label class="toolbar-search toolbar-search--full">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <input
+                v-model.trim="searchQuery"
+                type="text"
+                placeholder="Search title, body, description, or tags"
+              />
+            </label>
+
+            <div class="workspace-toolbar-secondary">
+              <div class="toolbar-filters">
+                <div class="filter-dropdown-wrap" @click.stop>
+                  <button
+                    @click="toggleManagementFilterDropdown"
+                    :class="['toolbar-filter-button', { active: selectedManagementTags.length > 0 }]"
+                    title="Filter by tags"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+                    </svg>
+                    <span>Tags</span>
+                    <span v-if="selectedManagementTags.length > 0" class="toolbar-filter-count">{{ selectedManagementTags.length }}</span>
+                  </button>
+
+                  <div v-if="showManagementFilterDropdown" class="filter-dropdown">
+                    <TagSelector
+                      :available-tags="availableTags"
+                      :selected-tags="selectedManagementTags"
+                      title="Filter by Tags"
+                      @toggle="toggleManagementTag"
+                      @clear-all="clearManagementTags"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="toolbar-actions toolbar-actions--pane">
+                <div class="toolbar-actions-group">
+                  <div class="export-dropdown-wrap" @click.stop>
+                    <button
+                      @click="toggleExportDropdown"
+                      :disabled="selectedCommandIds.length === 0"
+                      class="action-button export-button"
+                    >
+                      Export
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m6 9 6 6 6-6"></path>
+                      </svg>
+                    </button>
+                    <div v-if="showExportDropdown" class="export-dropdown">
+                      <button class="export-dropdown-item" @click="handleExportBundle">As Bundle (.json)</button>
+                      <button class="export-dropdown-item" @click="handleExportAsLibrary">As Library (.zip)</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="canDeleteManagedCommands" class="toolbar-actions-group toolbar-actions-group--danger">
+                  <button
+                    @click="handleBulkDelete"
+                    :disabled="selectedCommandIds.length === 0"
+                    class="action-button delete-button"
+                    title="Delete selected commands"
+                  >
+                    Delete Selected
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="command-list-container">
+            <CommandList
+              :commands="filteredManagementCommands"
+              :selected-ids="selectedCommandIds"
+              :empty-title="emptyState.title"
+              :empty-message="emptyState.message"
+              @toggle="toggleCommandSelection"
+            />
+          </div>
+        </section>
+
+        <section class="workspace-pane workspace-pane--details">
+          <div class="workspace-pane-header workspace-pane-header--details">
+            <div>
+              <h4>Library</h4>
+              <p>{{ libraryOverviewNote }}</p>
+            </div>
+          </div>
+
+          <div class="overview-surface">
+            <div class="overview-grid">
+              <div class="overview-stat">
+                <span class="detail-label">Commands</span>
+                <span class="detail-value">{{ commands.length }}</span>
+              </div>
+              <div class="overview-stat">
+                <span class="detail-label">Visible</span>
+                <span class="detail-value">{{ filteredManagementCommands.length }}</span>
+              </div>
+              <div class="overview-stat">
+                <span class="detail-label">Selected</span>
+                <span class="detail-value">{{ selectedCommandIds.length }}</span>
+              </div>
+              <div class="overview-stat overview-stat--access">
+                <span class="detail-label">Access</span>
+                <span class="detail-value">{{ accessLabel }}</span>
+              </div>
+            </div>
+            <p class="overview-guidance">{{ overviewGuidance }}</p>
+          </div>
+
+          <section class="secondary-panel details-panel">
+            <div class="workspace-panel-header">
+              <div>
+                <h4>Library status</h4>
+                <p>{{ changesSummary.headline }}. {{ changesSummary.detail }}</p>
+              </div>
+            </div>
+
+            <div class="details-grid">
+              <div class="detail-card">
+                <span class="detail-label">Origin</span>
+                <span class="detail-value">{{ library.origin ? 'Origin-backed' : 'Local only' }}</span>
+                <span class="detail-meta">{{ library.origin?.url || 'No remote origin configured.' }}</span>
+              </div>
+              <div class="detail-card">
+                <span class="detail-label">Working tree</span>
+                <span class="detail-value" :class="`detail-value--${changesSummary.tone}`">{{ workingTreeLabel }}</span>
+                <span class="detail-meta">{{ workingTreeDetail }}</span>
+              </div>
+              <div
+                v-if="library.working_tree.state === 'dirty' || library.working_tree.state === 'clean'"
+                class="detail-card"
+              >
+                <span class="detail-label">File summary</span>
+                <div class="library-change-counts">
+                  <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> modified</span>
+                  <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> new</span>
+                  <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> deleted</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <details v-if="library.origin" class="workflow-disclosure">
+            <summary class="workflow-disclosure-summary">
+              <span>Origin workflow</span>
+              <span class="workflow-disclosure-copy">Git and remote actions for this library</span>
+            </summary>
+
+            <div class="workflow-disclosure-body">
+              <section class="secondary-panel workflow-panel">
+                <div class="workspace-panel-header">
+                  <div>
+                    <p v-if="workflowSummary">{{ workflowSummary.headline }}. {{ workflowSummary.detail }}</p>
+                    <p v-else-if="workflowError" class="workflow-copy workflow-copy--danger">{{ workflowError }}</p>
+                    <p v-else>Checking git-backed workflow support for this library.</p>
+                  </div>
+                </div>
+
+                <div class="details-grid workflow-grid">
+                  <div class="detail-card">
+                    <span class="detail-label">Remote</span>
+                    <span class="detail-value">{{ workflowSummary?.remote_name || 'Unavailable' }}</span>
+                    <span class="detail-meta">{{ library.origin.url }}</span>
+                  </div>
+                  <div class="detail-card">
+                    <span class="detail-label">Branch</span>
+                    <span class="detail-value">{{ workflowSummary?.current_branch || 'Detached / unknown' }}</span>
+                    <span class="detail-meta">Base: {{ workflowSummary?.default_branch || 'Unknown' }}</span>
+                    <span class="detail-meta">
+                      {{ workflowSummary?.has_upstream ? 'Tracks an upstream branch.' : 'No upstream branch configured.' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="workflow-actions">
+                  <button
+                    v-if="library.working_tree.state === 'not_repo'"
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy"
+                    title="Choose the real git-backed folder for this library"
+                    @click="$emit('relink')"
+                  >
+                    {{ workflowBusy === 'relink' ? 'Relinking...' : 'Relink Working Copy' }}
+                  </button>
+                  <button
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy || !workflowActionState.fetch.available"
+                    :title="workflowActionState.fetch.reason || 'Fetch origin refs'"
+                    @click="$emit('fetch-origin')"
+                  >
+                    {{ workflowBusy === 'fetch' ? 'Fetching...' : 'Fetch' }}
+                  </button>
+                  <button
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy || !workflowActionState.update.available"
+                    :title="workflowActionState.update.reason || 'Fast-forward this working copy from origin'"
+                    @click="$emit('update-origin')"
+                  >
+                    {{ workflowBusy === 'update' ? 'Updating...' : 'Update' }}
+                  </button>
+                  <button
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy || !workflowActionState.commit.available"
+                    :title="workflowActionState.commit.reason || 'Commit local changes in this library'"
+                    @click="$emit('commit')"
+                  >
+                    {{ workflowBusy === 'commit' ? 'Committing...' : 'Commit' }}
+                  </button>
+                  <button
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy || !workflowActionState.push.available"
+                    :title="workflowActionState.push.reason || 'Push the current branch to origin'"
+                    @click="$emit('push')"
+                  >
+                    {{ workflowBusy === 'push' ? 'Pushing...' : 'Push' }}
+                  </button>
+                  <button
+                    class="library-action-btn subtle"
+                    :disabled="!!workflowBusy || !workflowActionState.pull_request.available"
+                    :title="workflowActionState.pull_request.reason || 'Open a pull request from this branch'"
+                    @click="$emit('pull-request')"
+                  >
+                    {{ workflowBusy === 'pull_request' ? 'Opening...' : 'Pull Request' }}
+                  </button>
+                </div>
+
+                <p
+                  v-if="workflowActionNote"
+                  class="workflow-copy"
+                  :class="{ 'workflow-copy--warning': !!workflowSummaryReason }"
+                >
+                  {{ workflowActionNote }}
+                </p>
+              </section>
+            </div>
+          </details>
+        </section>
       </div>
 
       <div v-if="feedbackMessage" class="sync-message" :class="feedbackMessageType">
@@ -331,6 +384,7 @@ const selectedCommandIds = ref<number[]>([])
 const selectedManagementTags = ref<string[]>([])
 const showManagementFilterDropdown = ref(false)
 const showExportDropdown = ref(false)
+const searchQuery = ref('')
 
 function isWritableLocalLibrary(library: Library | null | undefined): library is Library {
   return !!library && library.type === 'local' && !!library.manifest_path && library.permission !== 'consumer'
@@ -340,15 +394,33 @@ const canDeleteManagedCommands = computed(() => isWritableLocalLibrary(props.lib
 const canImportIntoManagedLibrary = computed(() => {
   return !!props.library && props.library.id === props.defaultWritableLibrary?.id
 })
+const displayPath = computed(() => {
+  if (!props.library) return ''
+  return props.library.local_path || props.library.working_copy.local_path || props.library.github_repo
+})
+const accessLabel = computed(() => {
+  if (!props.library) return ''
+  return isWritableLocalLibrary(props.library) ? 'Writable' : 'Read-only'
+})
+const accessDetail = computed(() => {
+  if (!props.library) return ''
+  if (canImportIntoManagedLibrary.value) {
+    return 'This is the default writable library for imports and new commands.'
+  }
+  if (isWritableLocalLibrary(props.library)) {
+    return 'Commands in this library can be edited, exported, or deleted locally.'
+  }
+  return 'Commands here can be reviewed and exported, but destructive local actions stay disabled.'
+})
 const managementContextNote = computed(() => {
   if (!props.library) return ''
   if (canImportIntoManagedLibrary.value) {
-    return 'Imports and new commands land in this default writable library.'
+    return 'This is your default writable library. Manage its command set here, and use the origin workflow only when you need repo actions.'
   }
-  if (props.library.type === 'local') {
-    return 'This local library is readable here, but imports and new commands still target the default writable library.'
+  if (isWritableLocalLibrary(props.library)) {
+    return 'Manage this library’s command set here. Repo workflow stays available as a separate secondary area.'
   }
-  return 'This subscribed library is managed in context here. Export stays available, but destructive local delete is hidden.'
+  return 'This library is read-only in SnipForge. You can filter, review, and export commands here, while repo actions stay separate.'
 })
 const changesSummary = computed(() => {
   if (!props.library) {
@@ -401,24 +473,129 @@ const workingTreeLabel = computed(() => {
       return ''
   }
 })
-const availableTags = computed(() => getAllTags(props.commands))
-const filteredManagementCommands = computed(() => {
-  if (selectedManagementTags.value.length === 0) {
-    return props.commands
+const workingTreeDetail = computed(() => {
+  if (!props.library) return ''
+  return props.library.working_tree.error || changesSummary.value.detail
+})
+const headerBadges = computed(() => {
+  if (!props.library) return [] as Array<{ label: string; tone: string }>
+
+  const badges: Array<{ label: string; tone: string }> = []
+
+  if (props.defaultWritableLibrary?.id === props.library.id) {
+    badges.push({ label: 'Default writable', tone: 'accent' })
   }
 
-  return props.commands.filter(command =>
-    matchesTagFilter(command.tagsNormalized, selectedManagementTags.value)
-  )
+  badges.push({ label: props.library.origin ? 'Origin-backed' : 'Local only', tone: 'neutral' })
+
+  if (!canDeleteManagedCommands.value) {
+    badges.push({ label: 'Read-only', tone: 'muted' })
+  }
+
+  return badges
 })
-const managementEmptyMessage = computed(() => {
+const availableTags = computed(() => getAllTags(props.commands))
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
+const filteredManagementCommands = computed(() => {
+  return props.commands.filter(command => {
+    const matchesTags = selectedManagementTags.value.length === 0
+      || matchesTagFilter(command.tagsNormalized, selectedManagementTags.value)
+
+    if (!matchesTags) return false
+    if (!normalizedSearchQuery.value) return true
+
+    const haystack = [
+      command.title,
+      command.description || '',
+      command.body,
+      command.tags,
+      command.language || '',
+    ].join(' ').toLowerCase()
+
+    return haystack.includes(normalizedSearchQuery.value)
+  })
+})
+const emptyState = computed(() => {
   if (!props.library) {
-    return 'Choose a library to manage its commands'
+    return {
+      title: 'No library selected',
+      message: 'Choose a library to manage its commands.',
+    }
   }
-  if (selectedManagementTags.value.length > 0) {
-    return 'No commands in this library match the selected tags'
+
+  if (normalizedSearchQuery.value || selectedManagementTags.value.length > 0) {
+    return {
+      title: 'No matching commands',
+      message: 'Try clearing the search or tag filters to see more commands in this library.',
+    }
   }
-  return 'No commands in this library'
+
+  if (canImportIntoManagedLibrary.value) {
+    return {
+      title: 'This library is empty',
+      message: 'Import commands into your default writable library to start building it out.',
+    }
+  }
+
+  if (isWritableLocalLibrary(props.library)) {
+    return {
+      title: 'No commands here yet',
+      message: 'This library is writable, but it does not contain any commands yet.',
+    }
+  }
+
+  return {
+    title: 'No commands available',
+    message: 'This read-only library has no indexed commands to manage right now.',
+  }
+})
+const commandListNote = computed(() => {
+  if (!props.library) return ''
+  if (normalizedSearchQuery.value || selectedManagementTags.value.length > 0) {
+    return 'Filter the library, then select the commands you want to export or remove.'
+  }
+  return 'Search, filter, and select commands for bulk actions.'
+})
+const libraryOverviewNote = computed(() => {
+  if (hasSelection.value) {
+    return 'Bulk actions are ready. Export the selected commands, or delete them if this library is writable.'
+  }
+  if (canDeleteManagedCommands.value) {
+    return 'Use the command list to build a selection, then export or clean up the library.'
+  }
+  return 'This library is read-only here, so management stays limited to review, filtering, and export.'
+})
+const overviewGuidance = computed(() => {
+  if (!props.library) return ''
+  if (hasSelection.value) {
+    return canDeleteManagedCommands.value
+      ? 'You have a selection ready. Export it, or delete it if you are cleaning up this library.'
+      : 'You have a selection ready to export. Destructive actions stay disabled because this library is read-only.'
+  }
+  if (normalizedSearchQuery.value || selectedManagementTags.value.length > 0) {
+    return 'Current filters are narrowing the list. Select matching commands on the left to export them as a group.'
+  }
+  if (canImportIntoManagedLibrary.value) {
+    return 'Import adds commands into this library. Once you have a selection, export and delete become available as needed.'
+  }
+  return 'Routine command management happens on the left. Open the origin workflow only when you need fetch, update, push, or PR actions.'
+})
+const hasSelection = computed(() => selectedCommandIds.value.length > 0)
+const selectionSummaryTitle = computed(() => {
+  return hasSelection.value
+    ? `${selectedCommandIds.value.length} selected`
+    : 'Bulk select'
+})
+const selectionSummaryDetail = computed(() => {
+  const visibleCount = filteredManagementCommands.value.length
+  const totalCount = props.commands.length
+  const commandLabel = totalCount === 1 ? 'command' : 'commands'
+
+  if (hasSelection.value) {
+    return `${visibleCount} of ${totalCount} ${commandLabel} visible`
+  }
+
+  return `${visibleCount} ${visibleCount === 1 ? 'command' : 'commands'} visible`
 })
 const isAllSelected = computed(() =>
   filteredManagementCommands.value.length > 0 &&
@@ -439,6 +616,7 @@ function resetState() {
   selectedManagementTags.value = []
   showManagementFilterDropdown.value = false
   showExportDropdown.value = false
+  searchQuery.value = ''
 }
 
 function handleClose() {
@@ -478,6 +656,7 @@ function toggleCommandSelection(id: number) {
   } else {
     selectedCommandIds.value.splice(index, 1)
   }
+
 }
 
 function handleBulkDelete() {
@@ -502,10 +681,6 @@ function handleExportAsLibrary() {
   emit('export-library', [...selectedCommandIds.value])
 }
 
-function formatSyncTime(timestamp: string) {
-  return new Date(timestamp).toLocaleString()
-}
-
 watch(() => props.show, visible => {
   if (!visible) resetState()
 })
@@ -517,7 +692,7 @@ watch(() => props.library?.id, () => {
 watch(filteredManagementCommands, commands => {
   const visibleIds = new Set(commands.map(command => command.id))
   selectedCommandIds.value = selectedCommandIds.value.filter(id => visibleIds.has(id))
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -525,7 +700,7 @@ watch(filteredManagementCommands, commands => {
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-modal) + 1);
-  background: rgba(0, 0, 0, 0.64);
+  background: rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,17 +708,18 @@ watch(filteredManagementCommands, commands => {
 }
 
 .library-management-modal {
-  width: min(1200px, calc(100vw - 48px));
-  height: min(860px, calc(100vh - 48px));
-  background: var(--bg-app);
+  width: min(1380px, calc(100vw - 48px));
+  height: min(900px, calc(100vh - 48px));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-app) 92%, black) 0%, var(--bg-app) 100%);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  border-radius: 20px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 .library-management-modal-header {
@@ -551,27 +727,59 @@ watch(filteredManagementCommands, commands => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
 }
 
-.library-management-copy {
+.library-management-header-main {
   min-width: 0;
 }
 
 .library-management-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .library-management-title-row h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   color: var(--text-primary);
 }
 
+.library-state-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.library-state-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+  color: var(--text-tertiary);
+}
+
+.library-state-badge.accent {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+  color: var(--text-primary);
+}
+
+.library-state-badge.muted {
+  color: var(--text-secondary);
+}
+
 .library-management-path {
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   color: var(--text-secondary);
   font-size: 12px;
   font-family: monospace;
@@ -582,223 +790,175 @@ watch(filteredManagementCommands, commands => {
   margin: 0;
   color: var(--text-tertiary);
   font-size: 13px;
+  line-height: 1.5;
+  max-width: 900px;
+}
+
+.library-management-header-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.library-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 420px;
 }
 
 .library-management-close {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-tertiary);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .library-management-close:hover {
-  background: var(--bg-hover);
+  background: var(--bg-surface);
   color: var(--text-primary);
 }
 
-.library-role-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  flex-shrink: 0;
-}
-
-.library-role-badge.default {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--text-primary);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
-.library-changes-panel {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-input);
-  padding: 14px;
+.selection-summary {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.library-changes-header,
-.library-origin-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.library-changes-copy h5 {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  color: var(--text-primary);
-}
-
-.library-changes-note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.library-changes-note--danger {
-  color: #ef5350;
-}
-
-.library-changes-actions,
-.library-origin-actions,
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.library-changes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.library-change-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--border);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+  color: var(--text-secondary);
+}
+
+.selection-summary--active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.selection-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.selection-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.selection-subcopy {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   min-width: 0;
 }
 
-.library-change-card--counts {
-  justify-content: space-between;
-}
-
-.library-change-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.library-change-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.library-change-value--success {
-  color: #66bb6a;
-}
-
-.library-change-value--warning {
-  color: #f5b64b;
-}
-
-.library-change-value--danger {
-  color: #ef5350;
-}
-
-.library-change-meta {
-  font-size: 12px;
-  color: var(--text-secondary);
-  word-break: break-word;
-}
-
-.library-change-counts {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.library-change-count {
+.toolbar-search {
+  min-width: 0;
+  width: 100%;
+  flex: 1 1 auto;
   display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: var(--bg-surface);
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
   border: 1px solid var(--border);
-  font-size: 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
   color: var(--text-secondary);
 }
 
-.library-change-count strong {
+.toolbar-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
   color: var(--text-primary);
+  font-size: 13px;
 }
 
-.library-origin-panel {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.toolbar-search input::placeholder {
+  color: var(--text-placeholder);
 }
 
-.library-origin-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
+.filter-dropdown-wrap,
+.export-dropdown-wrap {
+  position: relative;
 }
 
-.library-origin-note--warning {
-  color: #f5b64b;
-}
-
+.toolbar-filter-button,
+.action-button,
 .library-action-btn {
-  width: auto;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-surface);
-  color: var(--text-tertiary);
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s;
+  gap: 8px;
 }
 
-.library-action-btn:hover:not(:disabled) {
+.toolbar-filter-button,
+.action-button,
+.library-action-btn.subtle {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  color: var(--text-secondary);
+}
+
+.toolbar-filter-button:hover,
+.toolbar-filter-button.active,
+.library-action-btn:hover:not(:disabled),
+.export-button:hover:not(:disabled),
+.import-button:hover:not(:disabled) {
   background: var(--bg-hover);
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
-.library-action-btn:disabled,
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.toolbar-filter-button.active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-.management-controls {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+.toolbar-filter-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-primary);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.controls-row {
+.toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.bulk-selection {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .select-all-checkbox {
@@ -843,106 +1003,60 @@ watch(filteredManagementCommands, commands => {
   border-width: 0 0 2px 0;
 }
 
-.selection-counter {
-  font-size: 13px;
+.action-button:disabled,
+.library-action-btn:disabled,
+.toolbar-filter-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
   color: var(--text-tertiary);
 }
 
-.selection-counter.muted {
-  color: var(--text-placeholder);
-}
-
-.management-filter-button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-surface);
-  color: var(--text-placeholder);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.management-filter-button:hover,
-.management-filter-button.active {
-  background: var(--accent);
+.import-button {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
   color: var(--text-primary);
-  border-color: var(--accent);
+}
+
+.toolbar-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-actions-group--danger {
+  margin-left: 4px;
+}
+
+.delete-button {
+  border: 1px solid color-mix(in srgb, #ef5350 28%, var(--border));
+  background: color-mix(in srgb, #ef5350 7%, var(--bg-surface));
+  color: color-mix(in srgb, #ef8b89 72%, var(--text-secondary));
+}
+
+.delete-button:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef5350 12%, var(--bg-hover));
+  border-color: color-mix(in srgb, #ef5350 42%, var(--border-hover));
+  color: #efb0ae;
 }
 
 .filter-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   z-index: var(--z-dropdown);
-  width: 200px;
-}
-
-.spacer {
-  flex: 1;
-}
-
-.action-button {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-  height: 32px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.delete-icon-button,
-.export-button,
-.import-button {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-}
-
-.delete-icon-button {
-  min-width: 32px;
-  width: 32px;
-  padding: 0;
-  color: var(--text-tertiary);
-}
-
-.delete-icon-button:hover:not(:disabled) {
-  background-color: var(--danger);
-  border-color: var(--danger);
-  color: var(--text-primary);
-}
-
-.export-button:hover:not(:disabled),
-.import-button:hover:not(:disabled) {
-  background-color: var(--accent);
-  border-color: var(--accent);
-}
-
-.export-dropdown-wrap {
-  position: relative;
+  width: 220px;
 }
 
 .export-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
   z-index: var(--z-dropdown);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  min-width: 180px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  min-width: 190px;
   overflow: hidden;
 }
 
@@ -966,48 +1080,409 @@ watch(filteredManagementCommands, commands => {
   border-top: 1px solid var(--border);
 }
 
-.command-list-container {
+.library-workspace {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.workspace-pane {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-input) 90%, transparent);
+}
+
+.workspace-pane--details {
+  background: color-mix(in srgb, var(--bg-input) 94%, transparent);
+}
+
+.workspace-pane-header,
+.workspace-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workspace-pane-header h4,
+.workspace-panel-header h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.workspace-pane-header p,
+.workspace-panel-header p,
+.workflow-copy {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.workspace-pane-header--list {
+  padding-bottom: 2px;
+}
+
+.workspace-pane-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+}
+
+.toolbar-search--full {
+  width: 100%;
+  min-width: 0;
+}
+
+.workspace-toolbar-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-actions--pane {
+  justify-content: flex-end;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.workflow-copy--danger {
+  color: #ef8b89;
+}
+
+.workflow-copy--warning {
+  color: #f5c76b;
+}
+
+.command-list-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.overview-surface {
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-app) 72%, var(--bg-input)) 0%, color-mix(in srgb, var(--bg-input) 94%, black 6%) 100%);
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
+}
+
+.overview-stat .detail-value {
+  font-size: 18px;
+}
+
+.overview-stat--access .detail-value {
+  font-size: 16px;
+}
+
+.overview-guidance {
+  margin: 14px 0 0 0;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.workspace-pane--details {
+  min-height: 0;
+}
+
+.secondary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-surface) 48%, transparent);
+  min-width: 0;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 0 0;
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 0;
+  background: transparent;
+  min-width: 0;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.detail-value--success {
+  color: var(--text-primary);
+}
+
+.detail-value--warning {
+  color: var(--text-primary);
+}
+
+.detail-value--danger {
+  color: #efb0ae;
+}
+
+.detail-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.library-change-counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.library-change-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-app) 45%, transparent);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.library-change-count strong {
+  color: var(--text-primary);
+}
+
+.workflow-disclosure {
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-surface) 42%, transparent);
+  overflow: hidden;
+}
+
+.workflow-disclosure-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.workflow-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.workflow-disclosure-copy {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.workflow-disclosure-body {
+  padding: 0 14px 14px 14px;
+}
+
+.workflow-disclosure[open] .workflow-disclosure-summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.workflow-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workflow-actions .library-action-btn {
+  min-width: 0;
+}
+
+.workspace-empty-state {
+  flex: 1;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.workspace-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .sync-message {
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .sync-message.success {
-  color: #66bb6a;
+  color: #7fd184;
   background: rgba(102, 187, 106, 0.1);
 }
 
 .sync-message.error {
-  color: #ef5350;
+  color: #ef8b89;
   background: rgba(239, 83, 80, 0.1);
 }
 
-@media (max-width: 900px) {
-  .library-management-modal {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
-    padding: 18px;
+@container (min-width: 1100px) {
+  .library-workspace {
+    grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.08fr);
+  }
+}
+
+@container (max-width: 1099px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .controls-row,
-  .library-management-modal-header,
-  .library-changes-header,
-  .library-origin-header {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .library-management-modal-header {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .spacer {
-    display: none;
+  .library-management-header-controls {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .library-header-actions {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .workspace-pane {
+    padding: 16px;
+  }
+}
+
+@container (max-width: 860px) {
+  .library-management-modal {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .library-management-title-row h3 {
+    font-size: 20px;
+  }
+
+  .library-management-note {
+    font-size: 12px;
+  }
+
+  .workspace-pane-header,
+  .workspace-toolbar-secondary,
+  .toolbar-actions,
+  .workflow-disclosure-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selection-summary,
+  .toolbar-actions-group {
+    align-items: flex-start;
+  }
+
+  .toolbar-actions--pane {
+    margin-left: 0;
+  }
+
+  .library-management-title-row {
+    align-items: flex-start;
+  }
+}
+
+@container (max-width: 620px) {
+  .library-management-header-controls,
+  .library-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .library-management-close {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 1100px) {
+  .library-management-modal {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 24px);
+  }
+}
+
+@media (max-width: 900px) {
+  .library-management-modal {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
   }
 }
 </style>

@@ -10,6 +10,81 @@ Library Working Copies reframes SnipForge around one simple rule: every command 
 
 ## Active Notes
 
+### Issue #61: simplify library management modal actions and secondary workflows
+
+Plan:
+- stop treating the right pane like an individual-command inspection area and make it library-centric instead
+- simplify the left command toolbar into a clearer command-management flow: search first, filters next, routine actions grouped together, destructive action separated
+- reduce repeated writable/read-only messaging by moving that explanation into fewer, more useful summary areas
+- demote git/origin actions into an explicitly secondary workflow so they stay available without hijacking the main management surface
+
+Final notes:
+- removed the per-command preview from `src/components/LibraryManagementModal.vue` and replaced it with a library-level overview surface, so the right pane now supports library management instead of pretending this modal is a command inspector
+- rebuilt the left toolbar into a clearer two-row command-management flow: search first, filters second, routine export grouped together, destructive delete isolated to the far side
+- moved origin/git actions into a collapsible secondary workflow area, which keeps them available without making them compete with the main command-management flow
+- tightened state and empty-copy so writable vs read-only behavior is explained in fewer places and the right pane now focuses on what the user can do next at the library level
+- simplified `src/components/CommandList.vue` interaction so row clicks now directly toggle selection, matching the library-management goal better than the old preview-driven click behavior
+
+Verification:
+- `pnpm exec vue-tsc --noEmit`
+
+Responsive follow-up:
+- tightened the modal’s tablet/narrow-window breakpoints so the default app window no longer forces the header actions into giant stacked controls too early
+- now collapses the workspace to one column sooner, keeps header actions wrapped horizontally through medium widths, and only stacks them fully on genuinely narrow windows
+
+### Issue #60: align library management modal visuals with the SnipForge design system
+
+Plan:
+- pull the modal back toward existing SnipForge dark-surface styling instead of the heavier green/brown semantic treatment from the layout pass
+- reduce visual noise by simplifying header badges, softening secondary panels, and relying more on spacing/typography than nested bordered cards
+- tune command selection, hover, active, and disabled states so list navigation feels native to the rest of the app
+- tighten the command-toolbar grouping and preview hierarchy so the modal feels cohesive rather than like several UI experiments stitched together
+
+Final notes:
+- toned down `src/components/LibraryManagementModal.vue` so it now leans on SnipForge’s existing neutrals and accent tokens instead of loud semantic greens/reds across the whole surface
+- reduced visual overload by simplifying header badges, softening pane/secondary-panel borders, flattening the status cards, and making spacing + typography carry more of the hierarchy
+- tightened command controls and bulk-action presentation so selection state is quieter by default, stronger only when active, and destructive actions no longer dominate the toolbar when nothing is selected
+- updated `src/components/CommandList.vue` to use a subtler accent-tinted active state and cleaner list-surface treatment, which removes the muddy selected-row feel without hiding navigation focus
+- improved preview readability with tag chips, clearer metadata separation, and a more deliberate code-surface treatment so the preview feels like the main artifact again
+
+Verification:
+- `pnpm exec vue-tsc --noEmit`
+
+### Issue #59: redesign library management modal as a true two-pane workspace
+
+Plan:
+- stop treating the modal like a stacked dashboard by making the command browser and preview the two primary panes
+- move search, filtering, selection state, and bulk command actions fully into the left command pane so that pane clearly owns browsing
+- make the right pane primarily a preview surface, with library status and origin workflow demoted into subordinate sections below the preview instead of competing beside it
+- keep library-level actions visible, but attach them to the library header/context instead of letting them blur pane ownership
+
+Final notes:
+- restructured `src/components/LibraryManagementModal.vue` into an actual two-pane workspace: the left pane now owns command browsing, selection state, search/filter controls, and bulk actions, while the right pane is led by one dominant preview surface
+- moved library-level refresh/sync/import controls into the modal header so they stay available without competing with the command/preview relationship inside the workspace itself
+- demoted library status and origin workflow into subordinate panels below the preview, which removes the old stacked-dashboard feeling and gives the preview a single, obvious owner
+- adjusted the pane proportions and surface hierarchy so the preview now reads as the main inspection area instead of sharing equal visual weight with status/admin sections
+
+Verification:
+- `pnpm exec vue-tsc --noEmit`
+
+### Issue #58: restructure library management modal for preview and workflows
+
+Plan:
+- turn the dedicated library management modal into a real workspace with a stronger header, clear state badges, and explicit local-path/origin context
+- split bulk command management from origin/git actions so routine library work and repo workflows stop competing in the same visual block
+- add an in-modal command preview plus search/filter controls so users can inspect commands without relying on a cramped flat list
+- make writable vs read-only state obvious in both copy and action affordances, including stronger empty-state guidance for local writable libraries vs origin-backed read-only ones
+
+Final notes:
+- rebuilt `src/components/LibraryManagementModal.vue` into a two-column management workspace with a stronger header, explicit library state badges, a command toolbar, a full preview pane, and separate library-status/origin-workflow sections
+- added search alongside tag filtering in the modal so command discovery now works inside the management surface instead of forcing users to scroll a flat list blindly
+- separated active-command preview from bulk selection by updating `src/components/CommandList.vue`: row clicks now drive preview focus, while checkboxes remain dedicated to multi-select actions
+- made writable vs read-only behavior more legible through badge/copy changes, hidden destructive actions for non-writable libraries, and clearer empty-state messaging for writable vs read-only libraries
+
+Verification:
+- `pnpm exec vue-tsc --noEmit`
+- `pnpm vitest run tests/preload.test.ts tests/library-changes.test.ts`
+
 ### Issue #57: dedicated library management modal
 
 Plan:
