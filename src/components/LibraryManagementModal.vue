@@ -51,44 +51,46 @@
         </div>
       </div>
 
-      <div class="library-workspace">
-        <section class="workspace-pane workspace-pane--list">
-          <div class="workspace-pane-header workspace-pane-header--list">
+      <div class="library-management-modal-body">
+        <section class="management-section">
+          <div class="section-header-row section-header-row--commands">
             <div>
               <h4>Commands</h4>
               <p>{{ commandListNote }}</p>
             </div>
-
-            <div class="selection-summary" :class="{ 'selection-summary--active': hasSelection }">
-              <input
-                type="checkbox"
-                class="select-all-checkbox"
-                :checked="isAllSelected"
-                :indeterminate="isIndeterminate"
-                @change="toggleSelectAll"
-              />
-              <div class="selection-copy">
-                <span class="selection-count">{{ selectionSummaryTitle }}</span>
-                <span class="selection-subcopy">{{ selectionSummaryDetail }}</span>
-              </div>
-            </div>
           </div>
 
-          <div class="workspace-pane-toolbar">
-            <label class="toolbar-search toolbar-search--full">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <input
-                v-model.trim="searchQuery"
-                type="text"
-                placeholder="Search title, body, description, or tags"
-              />
-            </label>
+          <div class="command-toolbar-surface">
+            <div class="command-toolbar-top-row">
+              <label class="toolbar-search toolbar-search--full">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input
+                  v-model.trim="searchQuery"
+                  type="text"
+                  placeholder="Search title, body, description, or tags"
+                />
+              </label>
 
-            <div class="workspace-toolbar-secondary">
-              <div class="toolbar-filters">
+              <label class="selection-summary" :class="{ 'selection-summary--active': hasSelection }">
+                <input
+                  type="checkbox"
+                  class="select-all-checkbox"
+                  :checked="isAllSelected"
+                  :indeterminate="isIndeterminate"
+                  @change="toggleSelectAll"
+                />
+                <div class="selection-copy">
+                  <span class="selection-count">{{ selectionSummaryTitle }}</span>
+                  <span class="selection-subcopy">{{ selectionSummaryDetail }}</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="command-toolbar-actions">
+              <div class="command-toolbar-left">
                 <div class="filter-dropdown-wrap" @click.stop>
                   <button
                     @click="toggleManagementFilterDropdown"
@@ -114,40 +116,38 @@
                 </div>
               </div>
 
-              <div class="toolbar-actions toolbar-actions--pane">
-                <div class="toolbar-actions-group">
-                  <div class="export-dropdown-wrap" @click.stop>
-                    <button
-                      @click="toggleExportDropdown"
-                      :disabled="selectedCommandIds.length === 0"
-                      class="action-button export-button"
-                    >
-                      Export
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="m6 9 6 6 6-6"></path>
-                      </svg>
-                    </button>
-                    <div v-if="showExportDropdown" class="export-dropdown">
-                      <button class="export-dropdown-item" @click="handleExportBundle">As Bundle (.json)</button>
-                      <button class="export-dropdown-item" @click="handleExportAsLibrary">As Library (.zip)</button>
-                    </div>
+              <div class="command-toolbar-right">
+                <div class="export-dropdown-wrap" @click.stop>
+                  <button
+                    @click="toggleExportDropdown"
+                    :disabled="selectedCommandIds.length === 0"
+                    class="action-button export-button"
+                  >
+                    Export
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6"></path>
+                    </svg>
+                  </button>
+                  <div v-if="showExportDropdown" class="export-dropdown">
+                    <button class="export-dropdown-item" @click="handleExportBundle">As Bundle (.json)</button>
+                    <button class="export-dropdown-item" @click="handleExportAsLibrary">As Library (.zip)</button>
                   </div>
                 </div>
-                <div v-if="canDeleteManagedCommands" class="toolbar-actions-group toolbar-actions-group--danger">
-                  <button
-                    @click="handleBulkDelete"
-                    :disabled="selectedCommandIds.length === 0"
-                    class="action-button delete-button"
-                    title="Delete selected commands"
-                  >
-                    Delete Selected
-                  </button>
-                </div>
+
+                <button
+                  v-if="canDeleteManagedCommands"
+                  @click="handleBulkDelete"
+                  :disabled="selectedCommandIds.length === 0"
+                  class="action-button delete-button"
+                  title="Delete selected commands"
+                >
+                  Delete Selected
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="command-list-container">
+          <div class="command-list-shell">
             <CommandList
               :commands="filteredManagementCommands"
               :selected-ids="selectedCommandIds"
@@ -158,164 +158,160 @@
           </div>
         </section>
 
-        <section class="workspace-pane workspace-pane--details">
-          <div class="workspace-pane-header workspace-pane-header--details">
+        <section class="management-section">
+          <div class="section-header-row">
             <div>
               <h4>Library</h4>
               <p>{{ libraryOverviewNote }}</p>
             </div>
           </div>
 
-          <div class="overview-surface">
-            <div class="overview-grid">
-              <div class="overview-stat">
-                <span class="detail-label">Commands</span>
-                <span class="detail-value">{{ commands.length }}</span>
-              </div>
-              <div class="overview-stat">
-                <span class="detail-label">Visible</span>
-                <span class="detail-value">{{ filteredManagementCommands.length }}</span>
-              </div>
-              <div class="overview-stat">
-                <span class="detail-label">Selected</span>
-                <span class="detail-value">{{ selectedCommandIds.length }}</span>
-              </div>
-              <div class="overview-stat overview-stat--access">
-                <span class="detail-label">Access</span>
-                <span class="detail-value">{{ accessLabel }}</span>
-              </div>
+          <div class="overview-grid">
+            <div class="overview-stat">
+              <span class="detail-label">Commands</span>
+              <span class="detail-value">{{ commands.length }}</span>
             </div>
-            <p class="overview-guidance">{{ overviewGuidance }}</p>
+            <div class="overview-stat">
+              <span class="detail-label">Visible</span>
+              <span class="detail-value">{{ filteredManagementCommands.length }}</span>
+            </div>
+            <div class="overview-stat">
+              <span class="detail-label">Selected</span>
+              <span class="detail-value">{{ selectedCommandIds.length }}</span>
+            </div>
+            <div class="overview-stat">
+              <span class="detail-label">Access</span>
+              <span class="detail-value">{{ accessLabel }}</span>
+              <span class="detail-meta">{{ accessDetail }}</span>
+            </div>
           </div>
 
-          <section class="secondary-panel details-panel">
-            <div class="workspace-panel-header">
-              <div>
-                <h4>Library status</h4>
-                <p>{{ changesSummary.headline }}. {{ changesSummary.detail }}</p>
-              </div>
-            </div>
-
-            <div class="details-grid">
-              <div class="detail-card">
-                <span class="detail-label">Origin</span>
-                <span class="detail-value">{{ library.origin ? 'Origin-backed' : 'Local only' }}</span>
-                <span class="detail-meta">{{ library.origin?.url || 'No remote origin configured.' }}</span>
-              </div>
-              <div class="detail-card">
-                <span class="detail-label">Working tree</span>
-                <span class="detail-value" :class="`detail-value--${changesSummary.tone}`">{{ workingTreeLabel }}</span>
-                <span class="detail-meta">{{ workingTreeDetail }}</span>
-              </div>
-              <div
-                v-if="library.working_tree.state === 'dirty' || library.working_tree.state === 'clean'"
-                class="detail-card"
-              >
-                <span class="detail-label">File summary</span>
-                <div class="library-change-counts">
-                  <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> modified</span>
-                  <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> new</span>
-                  <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> deleted</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <details v-if="library.origin" class="workflow-disclosure">
-            <summary class="workflow-disclosure-summary">
-              <span>Origin workflow</span>
-              <span class="workflow-disclosure-copy">Git and remote actions for this library</span>
-            </summary>
-
-            <div class="workflow-disclosure-body">
-              <section class="secondary-panel workflow-panel">
-                <div class="workspace-panel-header">
-                  <div>
-                    <p v-if="workflowSummary">{{ workflowSummary.headline }}. {{ workflowSummary.detail }}</p>
-                    <p v-else-if="workflowError" class="workflow-copy workflow-copy--danger">{{ workflowError }}</p>
-                    <p v-else>Checking git-backed workflow support for this library.</p>
-                  </div>
-                </div>
-
-                <div class="details-grid workflow-grid">
-                  <div class="detail-card">
-                    <span class="detail-label">Remote</span>
-                    <span class="detail-value">{{ workflowSummary?.remote_name || 'Unavailable' }}</span>
-                    <span class="detail-meta">{{ library.origin.url }}</span>
-                  </div>
-                  <div class="detail-card">
-                    <span class="detail-label">Branch</span>
-                    <span class="detail-value">{{ workflowSummary?.current_branch || 'Detached / unknown' }}</span>
-                    <span class="detail-meta">Base: {{ workflowSummary?.default_branch || 'Unknown' }}</span>
-                    <span class="detail-meta">
-                      {{ workflowSummary?.has_upstream ? 'Tracks an upstream branch.' : 'No upstream branch configured.' }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="workflow-actions">
-                  <button
-                    v-if="library.working_tree.state === 'not_repo'"
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy"
-                    title="Choose the real git-backed folder for this library"
-                    @click="$emit('relink')"
-                  >
-                    {{ workflowBusy === 'relink' ? 'Relinking...' : 'Relink Working Copy' }}
-                  </button>
-                  <button
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy || !workflowActionState.fetch.available"
-                    :title="workflowActionState.fetch.reason || 'Fetch origin refs'"
-                    @click="$emit('fetch-origin')"
-                  >
-                    {{ workflowBusy === 'fetch' ? 'Fetching...' : 'Fetch' }}
-                  </button>
-                  <button
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy || !workflowActionState.update.available"
-                    :title="workflowActionState.update.reason || 'Fast-forward this working copy from origin'"
-                    @click="$emit('update-origin')"
-                  >
-                    {{ workflowBusy === 'update' ? 'Updating...' : 'Update' }}
-                  </button>
-                  <button
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy || !workflowActionState.commit.available"
-                    :title="workflowActionState.commit.reason || 'Commit local changes in this library'"
-                    @click="$emit('commit')"
-                  >
-                    {{ workflowBusy === 'commit' ? 'Committing...' : 'Commit' }}
-                  </button>
-                  <button
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy || !workflowActionState.push.available"
-                    :title="workflowActionState.push.reason || 'Push the current branch to origin'"
-                    @click="$emit('push')"
-                  >
-                    {{ workflowBusy === 'push' ? 'Pushing...' : 'Push' }}
-                  </button>
-                  <button
-                    class="library-action-btn subtle"
-                    :disabled="!!workflowBusy || !workflowActionState.pull_request.available"
-                    :title="workflowActionState.pull_request.reason || 'Open a pull request from this branch'"
-                    @click="$emit('pull-request')"
-                  >
-                    {{ workflowBusy === 'pull_request' ? 'Opening...' : 'Pull Request' }}
-                  </button>
-                </div>
-
-                <p
-                  v-if="workflowActionNote"
-                  class="workflow-copy"
-                  :class="{ 'workflow-copy--warning': !!workflowSummaryReason }"
-                >
-                  {{ workflowActionNote }}
-                </p>
-              </section>
-            </div>
-          </details>
+          <p class="section-guidance">{{ overviewGuidance }}</p>
         </section>
+
+        <section class="management-section">
+          <div class="section-header-row">
+            <div>
+              <h4>Library status</h4>
+              <p>{{ changesSummary.headline }}. {{ changesSummary.detail }}</p>
+            </div>
+          </div>
+
+          <div class="details-grid">
+            <div class="detail-card">
+              <span class="detail-label">Origin</span>
+              <span class="detail-value">{{ library.origin ? 'Origin-backed' : 'Local only' }}</span>
+              <span class="detail-meta">{{ library.origin?.url || 'No remote origin configured.' }}</span>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">Working tree</span>
+              <span class="detail-value" :class="`detail-value--${changesSummary.tone}`">{{ workingTreeLabel }}</span>
+              <span class="detail-meta">{{ workingTreeDetail }}</span>
+            </div>
+            <div
+              v-if="library.working_tree.state === 'dirty' || library.working_tree.state === 'clean'"
+              class="detail-card"
+            >
+              <span class="detail-label">File summary</span>
+              <div class="library-change-counts">
+                <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> modified</span>
+                <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> new</span>
+                <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> deleted</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <details v-if="library.origin" class="workflow-disclosure">
+          <summary class="workflow-disclosure-summary">
+            <span>Origin workflow</span>
+            <span class="workflow-disclosure-copy">Git and remote actions for this library</span>
+          </summary>
+
+          <div class="workflow-disclosure-body">
+            <div class="workflow-summary-copy">
+              <p v-if="workflowSummary">{{ workflowSummary.headline }}. {{ workflowSummary.detail }}</p>
+              <p v-else-if="workflowError" class="workflow-copy workflow-copy--danger">{{ workflowError }}</p>
+              <p v-else>Checking git-backed workflow support for this library.</p>
+            </div>
+
+            <div class="details-grid workflow-details-grid">
+              <div class="detail-card">
+                <span class="detail-label">Remote</span>
+                <span class="detail-value">{{ workflowSummary?.remote_name || 'Unavailable' }}</span>
+                <span class="detail-meta">{{ library.origin.url }}</span>
+              </div>
+              <div class="detail-card">
+                <span class="detail-label">Branch</span>
+                <span class="detail-value">{{ workflowSummary?.current_branch || 'Detached / unknown' }}</span>
+                <span class="detail-meta">Base: {{ workflowSummary?.default_branch || 'Unknown' }}</span>
+                <span class="detail-meta">
+                  {{ workflowSummary?.has_upstream ? 'Tracks an upstream branch.' : 'No upstream branch configured.' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="workflow-actions">
+              <button
+                v-if="library.working_tree.state === 'not_repo'"
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy"
+                title="Choose the real git-backed folder for this library"
+                @click="$emit('relink')"
+              >
+                {{ workflowBusy === 'relink' ? 'Relinking...' : 'Relink Working Copy' }}
+              </button>
+              <button
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy || !workflowActionState.fetch.available"
+                :title="workflowActionState.fetch.reason || 'Fetch origin refs'"
+                @click="$emit('fetch-origin')"
+              >
+                {{ workflowBusy === 'fetch' ? 'Fetching...' : 'Fetch' }}
+              </button>
+              <button
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy || !workflowActionState.update.available"
+                :title="workflowActionState.update.reason || 'Fast-forward this working copy from origin'"
+                @click="$emit('update-origin')"
+              >
+                {{ workflowBusy === 'update' ? 'Updating...' : 'Update' }}
+              </button>
+              <button
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy || !workflowActionState.commit.available"
+                :title="workflowActionState.commit.reason || 'Commit local changes in this library'"
+                @click="$emit('commit')"
+              >
+                {{ workflowBusy === 'commit' ? 'Committing...' : 'Commit' }}
+              </button>
+              <button
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy || !workflowActionState.push.available"
+                :title="workflowActionState.push.reason || 'Push the current branch to origin'"
+                @click="$emit('push')"
+              >
+                {{ workflowBusy === 'push' ? 'Pushing...' : 'Push' }}
+              </button>
+              <button
+                class="library-action-btn subtle"
+                :disabled="!!workflowBusy || !workflowActionState.pull_request.available"
+                :title="workflowActionState.pull_request.reason || 'Open a pull request from this branch'"
+                @click="$emit('pull-request')"
+              >
+                {{ workflowBusy === 'pull_request' ? 'Opening...' : 'Pull Request' }}
+              </button>
+            </div>
+
+            <p
+              v-if="workflowActionNote"
+              class="workflow-copy"
+              :class="{ 'workflow-copy--warning': !!workflowSummaryReason }"
+            >
+              {{ workflowActionNote }}
+            </p>
+          </div>
+        </details>
       </div>
 
       <div v-if="feedbackMessage" class="sync-message" :class="feedbackMessageType">
@@ -578,7 +574,7 @@ const overviewGuidance = computed(() => {
   if (canImportIntoManagedLibrary.value) {
     return 'Import adds commands into this library. Once you have a selection, export and delete become available as needed.'
   }
-  return 'Routine command management happens on the left. Open the origin workflow only when you need fetch, update, push, or PR actions.'
+  return 'Routine command management happens above. Open the origin workflow only when you need fetch, update, push, or PR actions.'
 })
 const hasSelection = computed(() => selectedCommandIds.value.length > 0)
 const selectionSummaryTitle = computed(() => {
@@ -700,38 +696,39 @@ watch(filteredManagementCommands, commands => {
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-modal) + 1);
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--overlay, rgba(0, 0, 0, 0.72));
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
 }
 
 .library-management-modal {
-  width: min(1380px, calc(100vw - 48px));
-  height: min(900px, calc(100vh - 48px));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-app) 92%, black) 0%, var(--bg-app) 100%);
+  width: 90vw;
+  max-width: 600px;
+  max-height: 90vh;
+  background-color: var(--bg-elevated);
+  border-radius: 12px;
   border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
-  padding: 24px;
+  box-shadow: 0 10px 30px var(--shadow);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  overflow: hidden;
-  container-type: inline-size;
 }
 
 .library-management-modal-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .library-management-header-main {
   min-width: 0;
+  flex: 1;
 }
 
 .library-management-title-row {
@@ -744,8 +741,9 @@ watch(filteredManagementCommands, commands => {
 
 .library-management-title-row h3 {
   margin: 0;
-  font-size: 24px;
   color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .library-state-badges {
@@ -764,13 +762,13 @@ watch(filteredManagementCommands, commands => {
   letter-spacing: 0.03em;
   text-transform: uppercase;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+  background: var(--bg-input);
   color: var(--text-tertiary);
 }
 
 .library-state-badge.accent {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-input));
   color: var(--text-primary);
 }
 
@@ -788,10 +786,10 @@ watch(filteredManagementCommands, commands => {
 
 .library-management-note {
   margin: 0;
-  color: var(--text-tertiary);
-  font-size: 13px;
+  color: var(--text-secondary);
+  font-size: 14px;
   line-height: 1.5;
-  max-width: 900px;
+  max-width: 760px;
 }
 
 .library-management-header-controls {
@@ -804,28 +802,73 @@ watch(filteredManagementCommands, commands => {
 .library-header-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
-  max-width: 420px;
+  justify-content: flex-end;
 }
 
 .library-management-close {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: transparent;
+  background: none;
+  border: none;
   color: var(--text-tertiary);
-  font-size: 20px;
-  line-height: 1;
+  font-size: 24px;
   cursor: pointer;
-  flex-shrink: 0;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 .library-management-close:hover {
-  background: var(--bg-surface);
+  background: var(--border);
   color: var(--text-primary);
+}
+
+.library-management-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.management-section {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.management-section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-header-row h4 {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.section-header-row p,
+.section-guidance,
+.workflow-summary-copy p,
+.workflow-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .selection-summary {
@@ -833,13 +876,18 @@ watch(filteredManagementCommands, commands => {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
+  border: 1px solid var(--border);
   border-radius: 10px;
+  background: var(--bg-input);
   color: var(--text-secondary);
+  cursor: pointer;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .selection-summary--active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-input));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
 
 .selection-copy {
@@ -857,108 +905,6 @@ watch(filteredManagementCommands, commands => {
 .selection-subcopy {
   font-size: 12px;
   color: var(--text-tertiary);
-}
-
-.toolbar-filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.toolbar-search {
-  min-width: 0;
-  width: 100%;
-  flex: 1 1 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-}
-
-.toolbar-search input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 13px;
-}
-
-.toolbar-search input::placeholder {
-  color: var(--text-placeholder);
-}
-
-.filter-dropdown-wrap,
-.export-dropdown-wrap {
-  position: relative;
-}
-
-.toolbar-filter-button,
-.action-button,
-.library-action-btn {
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.toolbar-filter-button,
-.action-button,
-.library-action-btn.subtle {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
-  color: var(--text-secondary);
-}
-
-.toolbar-filter-button:hover,
-.toolbar-filter-button.active,
-.library-action-btn:hover:not(:disabled),
-.export-button:hover:not(:disabled),
-.import-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-}
-
-.toolbar-filter-button.active {
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg-surface));
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
-.toolbar-filter-count {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--text-primary);
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .select-all-checkbox {
@@ -1003,40 +949,124 @@ watch(filteredManagementCommands, commands => {
   border-width: 0 0 2px 0;
 }
 
-.action-button:disabled,
-.library-action-btn:disabled,
-.toolbar-filter-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  color: var(--text-tertiary);
+.command-toolbar-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
+  margin-bottom: 16px;
+  overflow: hidden;
 }
 
-.import-button {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+.command-toolbar-top-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+}
+
+.toolbar-search {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.toolbar-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
   color: var(--text-primary);
+  font-size: 14px;
 }
 
-.toolbar-actions-group {
+.toolbar-search input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.command-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.command-toolbar-left,
+.command-toolbar-right {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.toolbar-actions-group--danger {
-  margin-left: 4px;
+.filter-dropdown-wrap,
+.export-dropdown-wrap {
+  position: relative;
 }
 
-.delete-button {
-  border: 1px solid color-mix(in srgb, #ef5350 28%, var(--border));
-  background: color-mix(in srgb, #ef5350 7%, var(--bg-surface));
-  color: color-mix(in srgb, #ef8b89 72%, var(--text-secondary));
+.toolbar-filter-button,
+.action-button,
+.library-action-btn.subtle {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
 }
 
-.delete-button:hover:not(:disabled) {
-  background: color-mix(in srgb, #ef5350 12%, var(--bg-hover));
-  border-color: color-mix(in srgb, #ef5350 42%, var(--border-hover));
-  color: #efb0ae;
+.toolbar-filter-button:hover,
+.toolbar-filter-button.active,
+.library-action-btn:hover:not(:disabled),
+.export-button:hover:not(:disabled),
+.import-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-filter-button.active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.toolbar-filter-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-primary);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .filter-dropdown {
@@ -1054,8 +1084,8 @@ watch(filteredManagementCommands, commands => {
   z-index: var(--z-dropdown);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
   min-width: 190px;
   overflow: hidden;
 }
@@ -1080,171 +1110,53 @@ watch(filteredManagementCommands, commands => {
   border-top: 1px solid var(--border);
 }
 
-.library-workspace {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
+.action-button:disabled,
+.library-action-btn:disabled,
+.toolbar-filter-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--text-tertiary);
 }
 
-.workspace-pane {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-input) 90%, transparent);
-}
-
-.workspace-pane--details {
-  background: color-mix(in srgb, var(--bg-input) 94%, transparent);
-}
-
-.workspace-pane-header,
-.workspace-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.workspace-pane-header h4,
-.workspace-panel-header h4 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
+.import-button {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
   color: var(--text-primary);
 }
 
-.workspace-pane-header p,
-.workspace-panel-header p,
-.workflow-copy {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+.delete-button {
+  border: 1px solid color-mix(in srgb, #ef5350 28%, var(--border));
+  background: color-mix(in srgb, #ef5350 7%, var(--bg-surface));
+  color: color-mix(in srgb, #ef8b89 72%, var(--text-secondary));
 }
 
-.workspace-pane-header--list {
-  padding-bottom: 2px;
+.delete-button:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef5350 12%, var(--bg-hover));
+  border-color: color-mix(in srgb, #ef5350 42%, var(--border-hover));
+  color: #efb0ae;
 }
 
-.workspace-pane-toolbar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+.command-list-shell {
+  height: clamp(220px, 28vh, 300px);
+  min-height: 220px;
 }
 
-.toolbar-search--full {
-  width: 100%;
-  min-width: 0;
-}
-
-.workspace-toolbar-secondary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.toolbar-actions--pane {
-  justify-content: flex-end;
-  margin-left: auto;
-  flex-wrap: wrap;
-}
-
-.workflow-copy--danger {
-  color: #ef8b89;
-}
-
-.workflow-copy--warning {
-  color: #f5c76b;
-}
-
-.command-list-container {
-  flex: 1;
-  min-height: 0;
-}
-
-.overview-surface {
-  padding: 18px;
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-  border-radius: 16px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-app) 72%, var(--bg-input)) 0%, color-mix(in srgb, var(--bg-input) 94%, black 6%) 100%);
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.overview-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-surface) 50%, transparent);
-}
-
-.overview-stat .detail-value {
-  font-size: 18px;
-}
-
-.overview-stat--access .detail-value {
-  font-size: 16px;
-}
-
-.overview-guidance {
-  margin: 14px 0 0 0;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-secondary);
-}
-
-.workspace-pane--details {
-  min-height: 0;
-}
-
-.secondary-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-surface) 48%, transparent);
-  min-width: 0;
-}
-
+.overview-grid,
 .details-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
+.overview-stat,
 .detail-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 0 0 0;
-  border: none;
-  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 0;
-  background: transparent;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
   min-width: 0;
 }
 
@@ -1257,16 +1169,8 @@ watch(filteredManagementCommands, commands => {
 }
 
 .detail-value {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary);
-}
-
-.detail-value--success {
-  color: var(--text-primary);
-}
-
-.detail-value--warning {
   color: var(--text-primary);
 }
 
@@ -1281,6 +1185,10 @@ watch(filteredManagementCommands, commands => {
   word-break: break-word;
 }
 
+.section-guidance {
+  margin-top: 16px;
+}
+
 .library-change-counts {
   display: flex;
   gap: 8px;
@@ -1293,7 +1201,7 @@ watch(filteredManagementCommands, commands => {
   gap: 4px;
   padding: 6px 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-app) 45%, transparent);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   font-size: 12px;
   color: var(--text-secondary);
@@ -1304,9 +1212,9 @@ watch(filteredManagementCommands, commands => {
 }
 
 .workflow-disclosure {
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-surface) 42%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
   overflow: hidden;
 }
 
@@ -1317,8 +1225,9 @@ watch(filteredManagementCommands, commands => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 16px;
   color: var(--text-primary);
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1332,12 +1241,15 @@ watch(filteredManagementCommands, commands => {
   color: var(--text-tertiary);
 }
 
-.workflow-disclosure-body {
-  padding: 0 14px 14px 14px;
+.workflow-disclosure[open] .workflow-disclosure-summary {
+  border-bottom: 1px solid var(--border);
 }
 
-.workflow-disclosure[open] .workflow-disclosure-summary {
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+.workflow-disclosure-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .workflow-actions {
@@ -1346,29 +1258,16 @@ watch(filteredManagementCommands, commands => {
   flex-wrap: wrap;
 }
 
-.workflow-actions .library-action-btn {
-  min-width: 0;
+.workflow-copy--danger {
+  color: #ef8b89;
 }
 
-.workspace-empty-state {
-  flex: 1;
-  min-height: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 8px;
-  color: var(--text-secondary);
-}
-
-.workspace-empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+.workflow-copy--warning {
+  color: #f5c76b;
 }
 
 .sync-message {
+  margin: 0 24px 24px;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 13px;
@@ -1385,84 +1284,52 @@ watch(filteredManagementCommands, commands => {
   background: rgba(239, 83, 80, 0.1);
 }
 
-@container (min-width: 1100px) {
-  .library-workspace {
-    grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.08fr);
-  }
-}
-
-@container (max-width: 1099px) {
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .library-management-modal-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .library-management-header-controls {
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .library-header-actions {
-    justify-content: flex-start;
-    max-width: none;
-  }
-
-  .workspace-pane {
-    padding: 16px;
-  }
-}
-
-@container (max-width: 860px) {
+@media (max-width: 900px) {
   .library-management-modal {
-    padding: 14px;
-    gap: 12px;
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
   }
 
-  .overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .library-management-title-row h3 {
-    font-size: 20px;
-  }
-
-  .library-management-note {
-    font-size: 12px;
-  }
-
-  .workspace-pane-header,
-  .workspace-toolbar-secondary,
-  .toolbar-actions,
+  .library-management-modal-header,
+  .section-header-row,
+  .command-toolbar-top-row,
+  .command-toolbar-actions,
   .workflow-disclosure-summary {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .selection-summary,
-  .toolbar-actions-group {
-    align-items: flex-start;
+  .library-management-header-controls {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
   }
 
-  .toolbar-actions--pane {
-    margin-left: 0;
+  .library-header-actions,
+  .command-toolbar-left,
+  .command-toolbar-right,
+  .workflow-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
-  .library-management-title-row {
-    align-items: flex-start;
+  .selection-summary {
+    align-self: flex-start;
+  }
+
+  .overview-grid,
+  .details-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@container (max-width: 620px) {
-  .library-management-header-controls,
-  .library-header-actions {
+@media (max-width: 640px) {
+  .library-management-modal-header,
+  .library-management-modal-body {
+    padding: 16px;
+  }
+
+  .library-management-header-controls {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1470,19 +1337,9 @@ watch(filteredManagementCommands, commands => {
   .library-management-close {
     align-self: flex-start;
   }
-}
 
-@media (max-width: 1100px) {
-  .library-management-modal {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
-  }
-}
-
-@media (max-width: 900px) {
-  .library-management-modal {
-    width: calc(100vw - 16px);
-    height: calc(100vh - 16px);
+  .sync-message {
+    margin: 0 16px 16px;
   }
 }
 </style>

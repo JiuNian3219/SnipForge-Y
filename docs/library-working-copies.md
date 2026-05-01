@@ -19,18 +19,19 @@ Plan:
 - demote git/origin actions into an explicitly secondary workflow so they stay available without hijacking the main management surface
 
 Final notes:
-- removed the per-command preview from `src/components/LibraryManagementModal.vue` and replaced it with a library-level overview surface, so the right pane now supports library management instead of pretending this modal is a command inspector
-- rebuilt the left toolbar into a clearer two-row command-management flow: search first, filters second, routine export grouped together, destructive delete isolated to the far side
-- moved origin/git actions into a collapsible secondary workflow area, which keeps them available without making them compete with the main command-management flow
-- tightened state and empty-copy so writable vs read-only behavior is explained in fewer places and the right pane now focuses on what the user can do next at the library level
-- simplified `src/components/CommandList.vue` interaction so row clicks now directly toggle selection, matching the library-management goal better than the old preview-driven click behavior
+- dropped the oversized two-pane workspace treatment and rebuilt `src/components/LibraryManagementModal.vue` around the same modal pattern used by Settings: one proportional modal surface, one scrolling body, and stacked management sections instead of competing panes
+- moved bulk select into the same top row as search, then kept filters and bulk actions in a simpler secondary row so the command toolbar reads left-to-right without the old overflow problems
+- constrained the command list to a bounded list area so the modal no longer expands to dominate the whole app window or clip lower sections like library status
+- kept destructive delete visually separate from routine export/filter actions, while demoting origin/git controls into a collapsible secondary workflow area
+- tightened writable vs read-only and empty-state copy so the modal explains what the user can do next without repeating status labels across multiple surfaces
+- kept the row-click selection behavior in `src/components/CommandList.vue`, which matches the management-first workflow better than the older preview-driven interaction
 
 Verification:
 - `pnpm exec vue-tsc --noEmit`
+- visual check in `pnpm run dev`
 
-Responsive follow-up:
-- tightened the modal’s tablet/narrow-window breakpoints so the default app window no longer forces the header actions into giant stacked controls too early
-- now collapses the workspace to one column sooner, keeps header actions wrapped horizontally through medium widths, and only stacks them fully on genuinely narrow windows
+Follow-up note:
+- the modal is in a much better shippable state now, but there is still room for future polish on density and spacing if library management gets another dedicated UX pass
 
 ### Issue #60: align library management modal visuals with the SnipForge design system
 
