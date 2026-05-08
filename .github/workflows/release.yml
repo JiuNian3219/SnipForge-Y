@@ -1,93 +1,103 @@
-# Name of the workflow - shows up in GitHub Actions UI
 name: Build and Release
 
-# When should this workflow run?
-# We trigger on push events, but ONLY when tags starting with 'v' are pushed (like v2.4.0)
 on:
   push:
     tags:
       - 'v*'
 
-# Permissions needed for this workflow
-# The GITHUB_TOKEN needs write access to create releases and upload assets
 permissions:
   contents: write
 
-# Jobs are the main units of work - we have one job called 'release'
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  release:
-    # This job uses a matrix strategy to run on multiple operating systems in parallel
-    # Each OS runs independently and simultaneously
-    strategy:
-      matrix:
-        # These are the operating systems GitHub provides
-        # windows-latest = Windows Server, macos-latest = macOS, ubuntu-latest = Ubuntu Linux
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    
-    # Specify which OS this specific job instance runs on (from the matrix)
+  build:
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    
-    # Steps are the individual tasks that run sequentially on each OS
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact-name: snipforge-macos
+          - os: windows-latest
+            artifact-name: snipforge-windows
+          - os: ubuntu-latest
+            artifact-name: snipforge-linux
+
     steps:
-      # Step 1: Checkout the code
-      # This downloads your repository code to the GitHub Actions runner
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # Step 2: Set up Node.js
-      # Electron apps need Node.js to build
-      # We specify version 20 (LTS) for consistency
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
-      # Step 3: Install pnpm
-      # We use pnpm as our package manager (faster than npm)
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      
-      # Step 4: Install dependencies
-      # This runs 'pnpm install' to download all node_modules
+          node-version: '24'
+          cache: pnpm
+
       - name: Install dependencies
-        run: pnpm install
-      
-      # Step 5: Build the application
-      # This runs 'pnpm build' which:
-      # 1. Compiles TypeScript
-      # 2. Bundles with Vite
-      # 3. Packages with electron-builder for the current OS
+        run: pnpm install --frozen-lockfile
+
       - name: Build application
         run: pnpm build
-        env:
-          # GH_TOKEN allows electron-builder to create GitHub releases
-          # GITHUB_TOKEN is automatically provided by GitHub Actions
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      # Step 6: Create GitHub Release (only runs once, on macOS)
-      # We use 'if' to make this step only run on macOS to avoid duplicate releases
-      - name: Create Release
-        if: matrix.os == 'macos-latest'
-        uses: softprops/action-gh-release@v1
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
         with:
-          # Get the tag name that triggered this workflow
-          tag_name: ${{ github.ref_name }}
-          # Release title
-          name: SnipForge ${{ github.ref_name }}
-          # Mark as draft so you can review before publishing
-          draft: true
-          # Generate release notes automatically from commits
-          generate_release_notes: true
-          # Upload all the built files from all OSes
-          # The ** glob pattern finds files in all subdirectories
-          files: |
+          name: ${{ matrix.artifact-name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
             release/**/*.dmg
+            release/**/*.dmg.blockmap
             release/**/*.exe
+            release/**/*.exe.blockmap
             release/**/*.AppImage
+            release/**/*.AppImage.blockmap
             release/**/*.deb
             release/**/*.rpm
             release/**/*.zip
+            release/**/*.yml
+
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-assets -maxdepth 5 -type f | sort
+
+      - name: Create GitHub draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: SnipForge ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/**/*.dmg
+            release-assets/**/*.dmg.blockmap
+            release-assets/**/*.exe
+            release-assets/**/*.exe.blockmap
+            release-assets/**/*.AppImage
+            release-assets/**/*.AppImage.blockmap
+            release-assets/**/*.deb
+            release-assets/**/*.rpm
+            release-assets/**/*.zip
+            release-assets/**/*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

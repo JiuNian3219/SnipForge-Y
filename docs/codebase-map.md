@@ -8,7 +8,7 @@ Reference for navigating the SnipForge codebase. Updated as the project grows.
 SnipForge/
 ├── .claude/                         # Claude Code config + agent definitions
 ├── .github/workflows/
-│   └── release.yml                  # CI: build + release on tag push (Win/Mac/Linux)
+│   └── release.yml                  # CI: matrix builds + single draft release job on tag push
 ├── Command Bundles/                 # Pre-built snippet JSON files (not loaded by app)
 ├── docs/                            # Project documentation
 ├── electron/

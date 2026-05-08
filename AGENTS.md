@@ -80,6 +80,7 @@ Feature documentation lives in `docs/`. These are living documents — plan, imp
 | `docs/variable-substitution.md` | Variable substitution — `{{variable}}` templates, copy flow, highlighting | Current state documented, #11 planned |
 | `docs/auto-update.md` | Auto-update — version checking, download, install via electron-updater | Not started, needs scoping session |
 | `docs/db-health.md` | Database health — integrity checks, orphan detection, VACUUM | Deepness TBD |
+| `docs/release.md` | Release pipeline — tag-triggered CI builds, artifact collection, draft GitHub releases | Living reference |
 
 ## Development
 
@@ -122,7 +123,7 @@ Analyzes commits, determines version bump from conventional commits, generates c
 ```
 Bumps `package.json`, commits, tags, and pushes. No build verification or changelog — use when you're confident in the code. Go to GitHub Releases to publish the draft after CI finishes.
 
-In both cases, GitHub Actions builds for macOS, Windows, and Linux in parallel and attaches all artifacts to a draft release.
+In both cases, GitHub Actions builds for macOS, Windows, and Linux in parallel, uploads packaged artifacts, then a single release job attaches everything to one draft release. `electron-builder` must not receive release credentials during build jobs; GitHub Actions owns publishing. See `docs/release.md`.
 
 **Build config:** `electron-builder.json5` (not package.json). Always do clean builds when switching dev → production.
 
