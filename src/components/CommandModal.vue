@@ -1,583 +1,431 @@
 <template>
-    <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
-        <div class="modal-content">
-            <div class ="modal-header">
-                <h2>{{ mode === 'add' ? $t('commandModal.addTitle') : $t('commandModal.editTitle') }}</h2>
-                <button class="close-button" @click="$emit('cancel')">x</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="title">{{ $t('commandModal.title') }}</label>
-                    <input
-                        id="title"
-                        v-model="formData.title"
-                        type="text"
-                        :placeholder="$t('commandModal.titlePlaceholder')"
-                        ref="titleInput"
-                        maxlength="500"
-                    />
-                </div>
+  <BaseModal
+    :show="show"
+    :title="mode === 'add' ? $t('commandModal.addTitle') : $t('commandModal.editTitle')"
+    :close-label="$t('common.close')"
+    max-width="760px"
+    @close="$emit('cancel')"
+  >
+    <div class="command-modal-form">
+      <FormField :label="$t('commandModal.title')" for-id="title">
+        <BaseInput
+          id="title"
+          ref="titleInput"
+          v-model="formData.title"
+          type="text"
+          :placeholder="$t('commandModal.titlePlaceholder')"
+          maxlength="500"
+        />
+      </FormField>
 
-                <div class="form-group">
-                    <div class="field-header">
-                        <label for="body">{{ $t('commandModal.command') }}</label>
-                        <div class="language-dropdown" ref="languageDropdownRef">
-                            <button
-                                type="button"
-                                class="language-trigger"
-                                @click="languageOpen = !languageOpen"
-                            >
-                                {{ languageLabels[formData.language] || formData.language }}
-                                <span class="chevron" :class="{ open: languageOpen }">&#9662;</span>
-                            </button>
-                            <ul v-if="languageOpen" class="language-options">
-                                <li
-                                    v-for="opt in languageOptions"
-                                    :key="opt.value"
-                                    :class="{ selected: formData.language === opt.value }"
-                                    @click="selectLanguage(opt.value)"
-                                >
-                                    {{ opt.label }}
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <!-- Code editor for programming languages -->
-                    <CodeEditor
-                        v-if="isCodeLanguage(formData.language)"
-                        v-model="formData.body"
-                        :language="formData.language"
-                        :placeholder="$t('commandModal.codePlaceholder')"
-                    />
-                    <!-- Markdown editor with toolbar -->
-                    <MarkdownEditor
-                        v-else-if="formData.language === 'markdown'"
-                        v-model="formData.body"
-                        :placeholder="$t('commandModal.markdownPlaceholder')"
-                    />
-                    <!-- Rich text WYSIWYG editor -->
-                    <RichTextEditor
-                        v-else-if="formData.language === 'richtext'"
-                        v-model="formData.body"
-                        :placeholder="$t('commandModal.richTextPlaceholder')"
-                    />
-                    <!-- Plain text fallback -->
-                    <textarea
-                        v-else
-                        id="body"
-                        v-model="formData.body"
-                        :placeholder="$t('commandModal.bodyPlaceholder')"
-                        rows="10"
-                        class="plain-textarea"
-                    ></textarea>
-                </div>
+      <FormField :label="$t('commandModal.command')" for-id="body">
+        <template #header-actions>
+          <div ref="languageDropdownRef" class="language-dropdown">
+            <BaseButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              class="language-trigger"
+              @click="languageOpen = !languageOpen"
+            >
+              {{ languageLabels[formData.language] || formData.language }}
+              <span class="chevron" :class="{ open: languageOpen }">&#9662;</span>
+            </BaseButton>
+            <ul v-if="languageOpen" class="language-options">
+              <li
+                v-for="opt in languageOptions"
+                :key="opt.value"
+                :class="{ selected: formData.language === opt.value }"
+                @click="selectLanguage(opt.value)"
+              >
+                {{ opt.label }}
+              </li>
+            </ul>
+          </div>
+        </template>
 
-                <div class="form-group">
-                    <label for="tags">{{ $t('commandModal.tags') }}</label>
-                    <div class="autocomplete-container">
-                        <input
-                            id="tags"
-                            ref="tagsInputRef"
-                            v-model="tagsInput"
-                            type="text"
-                            :placeholder="$t('commandModal.tagsPlaceholder')"
-                            @input="handleTagInput"
-                            @keydown="handleTagKeydown"
-                            @click="updateInlineSuggestion"
-                            @keyup="updateInlineSuggestion"
-                        />
-                        <div
-                            v-if="inlineSuggestion"
-                            class="inline-suggestion"
-                            :style="getSuggestionPosition()"
-                        >
-                            {{ inlineSuggestion }}
-                        </div>
-                    </div>
-                </div>
+        <CodeEditor
+          v-if="isCodeLanguage(formData.language)"
+          v-model="formData.body"
+          :language="formData.language"
+          :placeholder="$t('commandModal.codePlaceholder')"
+        />
+        <MarkdownEditor
+          v-else-if="formData.language === 'markdown'"
+          v-model="formData.body"
+          :placeholder="$t('commandModal.markdownPlaceholder')"
+        />
+        <RichTextEditor
+          v-else-if="formData.language === 'richtext'"
+          v-model="formData.body"
+          :placeholder="$t('commandModal.richTextPlaceholder')"
+        />
+        <BaseTextarea
+          v-else
+          id="body"
+          v-model="formData.body"
+          class="plain-textarea"
+          :placeholder="$t('commandModal.bodyPlaceholder')"
+          rows="10"
+        />
+      </FormField>
 
-                <div class="form-group">
-                    <div class="field-header">
-                        <label for="description">{{ $t('commandModal.description') }}</label>
-                    </div>
-                    <!-- Always-editable markdown editor -->
-                    <MarkdownEditor
-                        v-model="formData.description"
-                        :placeholder="$t('commandModal.descriptionPlaceholder')"
-                    />
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button @click="$emit('cancel')" class="cancel-button">{{ $t('common.cancel') }}</button>
-                <button @click="handleSave" class="save-button">
-                    {{ mode === 'add' ? $t('commandModal.addCommand') : $t('commandModal.saveChanges') }}
-                </button>
-            </div>
+      <FormField :label="$t('commandModal.tags')" for-id="tags">
+        <div class="autocomplete-container">
+          <BaseInput
+            id="tags"
+            ref="tagsInputRef"
+            v-model="tagsInput"
+            type="text"
+            :placeholder="$t('commandModal.tagsPlaceholder')"
+            @input="handleTagInput"
+            @keydown="handleTagKeydown"
+            @click="updateInlineSuggestion"
+            @keyup="updateInlineSuggestion"
+          />
+          <div
+            v-if="inlineSuggestion"
+            class="inline-suggestion"
+            :style="getSuggestionPosition()"
+          >
+            {{ inlineSuggestion }}
+          </div>
         </div>
+      </FormField>
+
+      <FormField :label="$t('commandModal.description')" for-id="description">
+        <MarkdownEditor
+          v-model="formData.description"
+          :placeholder="$t('commandModal.descriptionPlaceholder')"
+        />
+      </FormField>
     </div>
+
+    <template #footer>
+      <BaseButton variant="secondary" @click="$emit('cancel')">
+        {{ $t('common.cancel') }}
+      </BaseButton>
+      <BaseButton variant="primary" @click="handleSave">
+        {{ mode === 'add' ? $t('commandModal.addCommand') : $t('commandModal.saveChanges') }}
+      </BaseButton>
+    </template>
+  </BaseModal>
 </template>
+
 <script setup lang="ts">
-  import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
-  import { getAllTags } from '../utils/tags'
-  import { getInlineSuggestion } from '../utils/autocomplete'
-  import CodeEditor from './CodeEditor.vue'
-  import RichTextEditor from './RichTextEditor.vue'
-  import MarkdownEditor from './MarkdownEditor.vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { getAllTags } from '../utils/tags'
+import { getInlineSuggestion } from '../utils/autocomplete'
+import BaseButton from './ui/BaseButton.vue'
+import BaseInput from './ui/BaseInput.vue'
+import BaseModal from './ui/BaseModal.vue'
+import BaseTextarea from './ui/BaseTextarea.vue'
+import FormField from './ui/FormField.vue'
+import CodeEditor from './CodeEditor.vue'
+import RichTextEditor from './RichTextEditor.vue'
+import MarkdownEditor from './MarkdownEditor.vue'
 
-  // Props
-  interface Props {
-    show: boolean
-    mode: 'add' | 'edit'
-    command?: {
-      id: number
-      title: string
-      body: string
-      description: string
-      tags: string
-      language: string
-    } | null
-    commands?: Array<{ tags: string }>
-  }
+interface InputHandle {
+  focus: () => void
+  getElement: () => HTMLInputElement | null
+}
 
-  const props = withDefaults(defineProps<Props>(), {
-    command: null,
-    commands: () => []
-  })
+interface Props {
+  show: boolean
+  mode: 'add' | 'edit'
+  command?: {
+    id: number
+    title: string
+    body: string
+    description: string
+    tags: string
+    language: string
+  } | null
+  commands?: Array<{ tags: string }>
+}
 
-  // Emits
-  const emit = defineEmits<{
-    save: [command: { title: string; body: string; description: string; tags: string; language: string }]
-    cancel: []
-  }>()
+const props = withDefaults(defineProps<Props>(), {
+  command: null,
+  commands: () => []
+})
+const { t } = useI18n()
 
-  // Form data
-  const formData = ref({
-    title: '',
-    body: '',
-    description: '',
-    language: 'plaintext'
-  })
+const emit = defineEmits<{
+  save: [command: { title: string; body: string; description: string; tags: string; language: string }]
+  cancel: []
+}>()
 
-  const tagsInput = ref('')
-  const titleInput = ref<HTMLInputElement>()
-  const tagsInputRef = ref<HTMLInputElement>()
+const formData = ref({
+  title: '',
+  body: '',
+  description: '',
+  language: 'plaintext'
+})
 
-  // Custom language dropdown
-  const languageOpen = ref(false)
-  const languageDropdownRef = ref<HTMLElement>()
+const tagsInput = ref('')
+const titleInput = ref<InputHandle | null>(null)
+const tagsInputRef = ref<InputHandle | null>(null)
+const languageOpen = ref(false)
+const languageDropdownRef = ref<HTMLElement>()
 
-  const languageOptions = [
-    { value: 'plaintext', label: 'Plain Text' },
-    { value: 'richtext', label: 'Rich Text' },
-    { value: 'markdown', label: 'Markdown' },
-    { value: 'yaml', label: 'YAML' },
-    { value: 'javascript', label: 'JavaScript' },
-    { value: 'typescript', label: 'TypeScript' },
-    { value: 'python', label: 'Python' },
-    { value: 'html', label: 'HTML' },
-    { value: 'css', label: 'CSS' },
-    { value: 'bash', label: 'Bash' },
-    { value: 'json', label: 'JSON' },
-    { value: 'sql', label: 'SQL' },
-    { value: 'go', label: 'Go' },
-    { value: 'rust', label: 'Rust' },
-    { value: 'java', label: 'Java' },
-  ]
+const languageOptions = [
+  { value: 'plaintext', label: 'Plain Text' },
+  { value: 'richtext', label: 'Rich Text' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'yaml', label: 'YAML' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'bash', label: 'Bash' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'java', label: 'Java' },
+]
 
-  const languageLabels = Object.fromEntries(languageOptions.map(o => [o.value, o.label]))
+const languageLabels = Object.fromEntries(languageOptions.map(o => [o.value, o.label]))
 
-  const selectLanguage = (value: string) => {
-    formData.value.language = value
+const selectLanguage = (value: string) => {
+  formData.value.language = value
+  languageOpen.value = false
+}
+
+const onClickOutsideDropdown = (e: MouseEvent) => {
+  if (languageDropdownRef.value && !languageDropdownRef.value.contains(e.target as Node)) {
     languageOpen.value = false
   }
+}
 
-  const onClickOutsideDropdown = (e: MouseEvent) => {
-    if (languageDropdownRef.value && !languageDropdownRef.value.contains(e.target as Node)) {
-      languageOpen.value = false
+onMounted(() => document.addEventListener('click', onClickOutsideDropdown))
+onUnmounted(() => document.removeEventListener('click', onClickOutsideDropdown))
+
+const isCodeLanguage = (language: string): boolean => {
+  const codeLangs = ['plaintext', 'yaml', 'javascript', 'typescript', 'python', 'html', 'css', 'bash', 'json', 'sql', 'go', 'rust', 'java']
+  return codeLangs.includes(language)
+}
+
+const availableTags = computed(() => getAllTags(props.commands || []))
+const inlineSuggestion = ref<string | null>(null)
+const cursorPosition = ref(0)
+
+watch(() => props.command, (newCommand) => {
+  if (newCommand) {
+    formData.value = {
+      title: newCommand.title,
+      body: newCommand.body,
+      description: newCommand.description || '',
+      language: newCommand.language || 'plaintext'
     }
+
+    try {
+      const tags = JSON.parse(newCommand.tags)
+      tagsInput.value = Array.isArray(tags) ? tags.join(', ') : ''
+    } catch {
+      tagsInput.value = ''
+    }
+  } else {
+    formData.value = { title: '', body: '', description: '', language: 'plaintext' }
+    tagsInput.value = ''
   }
+}, { immediate: true })
 
-  onMounted(() => document.addEventListener('click', onClickOutsideDropdown))
-  onUnmounted(() => document.removeEventListener('click', onClickOutsideDropdown))
-
-  // Helper to determine editor type
-  const isCodeLanguage = (language: string): boolean => {
-    const codeLangs = ['plaintext', 'yaml', 'javascript', 'typescript', 'python', 'html', 'css', 'bash', 'json', 'sql', 'go', 'rust', 'java']
-    return codeLangs.includes(language)
-  }
-
-
-  // Get available tags for autocomplete
-  const availableTags = computed(() => {
-    return getAllTags(props.commands || [])
-  })
-
-  // Inline suggestion state
-  const inlineSuggestion = ref<string | null>(null)
-  const cursorPosition = ref(0)
-
-  // Watch for prop changes to populate form
-  watch(() => props.command, (newCommand) => {
-    if (newCommand) {
-      formData.value = {
-        title: newCommand.title,
-        body: newCommand.body,
-        description: newCommand.description || '',
-        language: newCommand.language || 'plaintext'
-      }
-      // Parse tags from JSON string
-      try {
-        const tags = JSON.parse(newCommand.tags)
-        tagsInput.value = Array.isArray(tags) ? tags.join(', ') : ''
-      } catch {
-        tagsInput.value = ''
-      }
-    } else {
-      // Reset form for add mode
+watch(() => props.show, (isShown) => {
+  if (isShown) {
+    nextTick(() => {
+      titleInput.value?.focus()
+    })
+  } else {
+    languageOpen.value = false
+    if (props.mode === 'add') {
       formData.value = { title: '', body: '', description: '', language: 'plaintext' }
       tagsInput.value = ''
     }
-  }, { immediate: true })
+  }
+})
 
-  // Focus title input when modal opens and clear form when closing
-  watch(() => props.show, (isShown) => {
-    if (isShown) {
-      nextTick(() => {
-        titleInput.value?.focus()
-      })
-    } else {
-      languageOpen.value = false
-      // Modal is closing - clear form data for add mode to prevent persistence
-      if (props.mode === 'add') {
-        formData.value = { title: '', body: '', description: '', language: 'plaintext' }
-        tagsInput.value = ''
-      }
-    }
-  })
+const getTagsInputElement = () => tagsInputRef.value?.getElement() ?? null
 
-  // Update inline suggestion on input
-  const updateInlineSuggestion = () => {
-    if (!tagsInputRef.value) {
-      inlineSuggestion.value = null
-      return
-    }
+const updateInlineSuggestion = () => {
+  const inputElement = getTagsInputElement()
+  if (!inputElement) {
+    inlineSuggestion.value = null
+    return
+  }
+
+  const input = tagsInput.value
+  const cursor = inputElement.selectionStart || 0
+  cursorPosition.value = cursor
+
+  const suggestion = getInlineSuggestion(input, cursor, availableTags.value)
+  inlineSuggestion.value = suggestion.completionText
+}
+
+const handleTagInput = () => {
+  updateInlineSuggestion()
+}
+
+const handleTagKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Tab' && inlineSuggestion.value) {
+    event.preventDefault()
 
     const input = tagsInput.value
-    const cursor = tagsInputRef.value.selectionStart || 0
-    cursorPosition.value = cursor
-
+    const cursor = cursorPosition.value
     const suggestion = getInlineSuggestion(input, cursor, availableTags.value)
-    inlineSuggestion.value = suggestion.completionText
-  }
 
-  // Handle tag input changes
-  const handleTagInput = () => {
-    updateInlineSuggestion()
-  }
+    if (suggestion.completionText) {
+      tagsInput.value = input.substring(0, cursor) + suggestion.completionText + input.substring(cursor)
 
-  // Handle tag autocomplete on Tab key
-  const handleTagKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Tab' && inlineSuggestion.value) {
-      event.preventDefault()
-
-      // Accept the inline suggestion
-      const input = tagsInput.value
-      const cursor = cursorPosition.value
-      const suggestion = getInlineSuggestion(input, cursor, availableTags.value)
-
-      if (suggestion.completionText) {
-        const newValue = input.substring(0, cursor) + suggestion.completionText + input.substring(cursor)
-        tagsInput.value = newValue
-
-        // Move cursor to end of completed tag
-        nextTick(() => {
-          if (tagsInputRef.value && suggestion.completionText) {
-            const newCursorPos = cursor + suggestion.completionText.length
-            tagsInputRef.value.setSelectionRange(newCursorPos, newCursorPos)
-            updateInlineSuggestion()
-          }
-        })
-      }
-    } else if (event.key === 'Escape') {
-      // Clear suggestion on Escape
-      inlineSuggestion.value = null
-    }
-  }
-
-  // Cached canvas context for text measurement (no DOM manipulation)
-  let measureCanvas: CanvasRenderingContext2D | null = null
-
-  // Calculate position for inline suggestion using canvas measureText
-  const getSuggestionPosition = (): { left: string; top: string } => {
-    if (!tagsInputRef.value || !inlineSuggestion.value) {
-      return { left: '0px', top: '0px' }
-    }
-
-    const input = tagsInputRef.value
-
-    if (typeof input.selectionStart === 'number') {
-      const computedStyle = window.getComputedStyle(input)
-
-      // Lazily create and cache the canvas context
-      if (!measureCanvas) {
-        measureCanvas = document.createElement('canvas').getContext('2d')
-      }
-
-      if (measureCanvas) {
-        measureCanvas.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
-
-        const textBeforeCursor = input.value.substring(0, input.selectionStart)
-        const textWidth = measureCanvas.measureText(textBeforeCursor).width
-
-        const paddingLeft = parseInt(computedStyle.paddingLeft) || 12
-        const paddingTop = parseInt(computedStyle.paddingTop) || 12
-
-        return {
-          left: `${paddingLeft + textWidth}px`,
-          top: `${paddingTop + 1}px`
+      nextTick(() => {
+        const inputElement = getTagsInputElement()
+        if (inputElement && suggestion.completionText) {
+          const newCursorPos = cursor + suggestion.completionText.length
+          inputElement.setSelectionRange(newCursorPos, newCursorPos)
+          updateInlineSuggestion()
         }
-      }
+      })
     }
+  } else if (event.key === 'Escape') {
+    inlineSuggestion.value = null
+  }
+}
 
+let measureCanvas: CanvasRenderingContext2D | null = null
+
+const getSuggestionPosition = (): { left: string; top: string } => {
+  const input = getTagsInputElement()
+  if (!input || !inlineSuggestion.value) {
     return { left: '0px', top: '0px' }
   }
 
-  // Handle save
-  const handleSave = () => {
-    if (!formData.value.title.trim() || !formData.value.body.trim()) {
-      alert('Title and Command are required!')
-      return
+  if (typeof input.selectionStart === 'number') {
+    const computedStyle = window.getComputedStyle(input)
+
+    if (!measureCanvas) {
+      measureCanvas = document.createElement('canvas').getContext('2d')
     }
 
-    // Convert tags input to JSON array, cap at 12
-    const tags = tagsInput.value
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0)
-      .slice(0, 12)
+    if (measureCanvas) {
+      measureCanvas.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
 
-    emit('save', {
-      title: formData.value.title.trim(),
-      body: formData.value.body.trim(),
-      description: formData.value.description.trim(),
-      tags: JSON.stringify(tags),
-      language: formData.value.language
-    })
-  }
-  </script>
-  <style scoped>
-  /* Component-specific styles */
-  .field-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+      const textBeforeCursor = input.value.substring(0, input.selectionStart)
+      const textWidth = measureCanvas.measureText(textBeforeCursor).width
+      const paddingLeft = parseInt(computedStyle.paddingLeft) || 12
+      const paddingTop = parseInt(computedStyle.paddingTop) || 12
+
+      return {
+        left: `${paddingLeft + textWidth}px`,
+        top: `${paddingTop + 1}px`
+      }
+    }
   }
 
-  .field-header label {
-    margin-bottom: 0;
+  return { left: '0px', top: '0px' }
+}
+
+const handleSave = () => {
+  if (!formData.value.title.trim() || !formData.value.body.trim()) {
+    alert(t('commandModal.required'))
+    return
   }
 
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  const tags = tagsInput.value
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0)
+    .slice(0, 12)
 
-  .language-dropdown {
-    position: relative;
-  }
+  emit('save', {
+    title: formData.value.title.trim(),
+    body: formData.value.body.trim(),
+    description: formData.value.description.trim(),
+    tags: JSON.stringify(tags),
+    language: formData.value.language
+  })
+}
+</script>
 
-  .language-trigger {
-    background-color: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 4px 8px;
-    color: var(--text-placeholder);
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+<style scoped>
+.command-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  .language-trigger:hover {
-    background-color: var(--bg-surface);
-    border-color: var(--accent);
-    color: var(--text-primary);
-  }
+.language-dropdown {
+  position: relative;
+}
 
-  .language-trigger:focus-visible {
-    outline: none;
-    border-color: var(--accent);
-    color: var(--text-primary);
-  }
+.language-trigger {
+  min-height: 28px;
+  padding: 4px 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
 
-  .chevron {
-    font-size: 9px;
-    transition: transform 0.2s;
-  }
+.chevron {
+  font-size: 9px;
+  transition: transform 0.2s;
+}
 
-  .chevron.open {
-    transform: rotate(180deg);
-  }
+.chevron.open {
+  transform: rotate(180deg);
+}
 
-  .language-options {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 4px;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 0;
-    list-style: none;
-    min-width: 140px;
-    max-height: 260px;
-    overflow-y: auto;
-    z-index: 10;
-    box-shadow: 0 4px 12px var(--shadow);
-  }
+.language-options {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 0;
+  list-style: none;
+  min-width: 140px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: var(--z-dropdown);
+  box-shadow: 0 4px 12px var(--shadow);
+}
 
-  .language-options li {
-    padding: 6px 12px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: background-color 0.15s;
-  }
+.language-options li {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
 
-  .language-options li:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-  }
+.language-options li:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
 
-  .language-options li.selected {
-    color: var(--accent);
-  }
+.language-options li.selected {
+  color: var(--accent);
+}
 
-  .markdown-content {
-    background-color: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    min-height: 80px;
-    color: var(--text-primary);
-    font-size: 14px;
-    line-height: 1.6;
-  }
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
 
-  .markdown-content :deep(h1),
-  .markdown-content :deep(h2),
-  .markdown-content :deep(h3) {
-    margin-top: 16px;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-  }
+.inline-suggestion {
+  position: absolute;
+  pointer-events: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-family: inherit;
+  white-space: nowrap;
+  z-index: 1;
+}
 
-  .markdown-content :deep(h1) {
-    font-size: 1.5em;
-  }
-
-  .markdown-content :deep(h2) {
-    font-size: 1.3em;
-  }
-
-  .markdown-content :deep(h3) {
-    font-size: 1.1em;
-  }
-
-  .markdown-content :deep(p) {
-    margin: 8px 0;
-  }
-
-  .markdown-content :deep(a) {
-    color: var(--accent);
-    text-decoration: underline;
-  }
-
-  .markdown-content :deep(a:hover) {
-    color: var(--accent-light);
-  }
-
-  .markdown-content :deep(code) {
-    background-color: var(--bg-surface);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-
-  .markdown-content :deep(pre) {
-    background-color: var(--bg-surface);
-    padding: 12px;
-    border-radius: 4px;
-    overflow-x: auto;
-  }
-
-  .markdown-content :deep(pre code) {
-    background: none;
-    padding: 0;
-  }
-
-  .markdown-content :deep(ul),
-  .markdown-content :deep(ol) {
-    margin: 8px 0;
-    padding-left: 24px;
-  }
-
-  .markdown-content :deep(li) {
-    margin: 4px 0;
-  }
-
-  .markdown-content :deep(blockquote) {
-    border-left: 3px solid var(--accent);
-    padding-left: 12px;
-    margin: 8px 0;
-    color: var(--text-placeholder);
-  }
-
-  .markdown-content :deep(img) {
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-    margin: 8px 0;
-  }
-
-  .autocomplete-container {
-    position: relative;
-    width: 100%;
-  }
-
-  .inline-suggestion {
-    position: absolute;
-    pointer-events: none;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-family: inherit;
-    white-space: nowrap;
-    z-index: 1;
-  }
-
-  .plain-textarea {
-    background-color: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, monospace;
-    line-height: 1.6;
-    resize: vertical;
-    min-height: 200px;
-    width: 100%;
-  }
-
-  .plain-textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  </style>   
-               
-            
+.plain-textarea {
+  min-height: 200px;
+  font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, monospace;
+}
+</style>

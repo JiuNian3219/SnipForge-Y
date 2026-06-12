@@ -102,7 +102,7 @@
                 <span class="toggle-title">{{ $t('settings.display.language') }}</span>
                 <span class="toggle-desc">{{ $t('settings.display.languageDesc') }}</span>
               </div>
-              <select class="setting-select" :value="currentLanguage" @change="handleLanguageChange">
+              <BaseSelect class="setting-select" :model-value="currentLanguage" @change="handleLanguageChange">
                 <option
                   v-for="option in languageOptions"
                   :key="option.value"
@@ -110,7 +110,7 @@
                 >
                   {{ $t(option.labelKey) }}
                 </option>
-              </select>
+              </BaseSelect>
             </div>
             <div class="toggle-row">
               <div class="toggle-label">
@@ -686,6 +686,7 @@ import { useSettings } from '../composables/useSettings'
 import { LANGUAGE_SETTING_OPTIONS, type LanguageSetting } from '../i18n'
 import LibraryManagementModal from './LibraryManagementModal.vue'
 import TagSelector from './TagSelector.vue'
+import BaseSelect from './ui/BaseSelect.vue'
 import { useI18n } from 'vue-i18n'
 import type {
   Library,

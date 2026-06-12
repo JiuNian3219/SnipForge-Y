@@ -67,6 +67,8 @@ The renderer now has two component layers:
 - `src/components/ui/` contains reusable primitives. These components use SnipForge CSS variables but do not import command, library, settings, or Electron domain code.
 - `src/components/domain/` contains SnipForge-specific components. Domain components may compose `ui/` primitives and may know about app workflows.
 - Large legacy components such as `SettingsModal.vue` and `LibraryManagementModal.vue` remain in the flat `src/components/` directory until they can be migrated safely.
+- New or touched UI should use `ui/` primitives for buttons, icon buttons, modals, inputs, textareas, selects, checkboxes, form fields, toolbar buttons, and empty states before adding local CSS.
+- Avoid extracting business subcomponents from `SettingsModal.vue` and `LibraryManagementModal.vue` opportunistically; migrate those areas in focused passes with visual verification.
 
 | Component | Purpose | Uses IPC? |
 |-----------|---------|-----------|

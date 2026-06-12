@@ -2,71 +2,63 @@
   <div class="rich-text-editor">
     <!-- Toolbar -->
     <div v-if="editor" class="toolbar">
-      <button
+      <ToolbarButton
         @click="editor.chain().focus().toggleBold().run()"
-        :class="{ 'is-active': editor.isActive('bold') }"
-        type="button"
-        title="Bold (Cmd+B)"
+        :active="editor.isActive('bold')"
+        :title="$t('editor.bold')"
       >
         <Bold :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="editor.chain().focus().toggleItalic().run()"
-        :class="{ 'is-active': editor.isActive('italic') }"
-        type="button"
-        title="Italic (Cmd+I)"
+        :active="editor.isActive('italic')"
+        :title="$t('editor.italic')"
       >
         <Italic :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="editor.chain().focus().toggleStrike().run()"
-        :class="{ 'is-active': editor.isActive('strike') }"
-        type="button"
-        title="Strikethrough"
+        :active="editor.isActive('strike')"
+        :title="$t('editor.strikethrough')"
       >
         <Strikethrough :size="16" />
-      </button>
+      </ToolbarButton>
       <div class="divider"></div>
-      <button
+      <ToolbarButton
         @click="editor.chain().focus().toggleBulletList().run()"
-        :class="{ 'is-active': editor.isActive('bulletList') }"
-        type="button"
-        title="Bullet List"
+        :active="editor.isActive('bulletList')"
+        :title="$t('editor.bulletList')"
       >
         <List :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="editor.chain().focus().toggleOrderedList().run()"
-        :class="{ 'is-active': editor.isActive('orderedList') }"
-        type="button"
-        title="Numbered List"
+        :active="editor.isActive('orderedList')"
+        :title="$t('editor.numberedList')"
       >
         <ListOrdered :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="editor.chain().focus().toggleTaskList().run()"
-        :class="{ 'is-active': editor.isActive('taskList') }"
-        type="button"
-        title="Task List"
+        :active="editor.isActive('taskList')"
+        :title="$t('editor.taskList')"
       >
         <ListTodo :size="16" />
-      </button>
+      </ToolbarButton>
       <div class="divider"></div>
-      <button
+      <ToolbarButton
         @click="openLinkDialog"
-        :class="{ 'is-active': editor.isActive('link') }"
-        type="button"
-        title="Link"
+        :active="editor.isActive('link')"
+        :title="$t('editor.link')"
       >
         <LinkIcon :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="imageFileInput?.click()"
-        type="button"
-        title="Insert Image (or paste / drag-drop)"
+        :title="$t('editor.image')"
       >
         <ImageIcon :size="16" />
-      </button>
+      </ToolbarButton>
       <input
         ref="imageFileInput"
         type="file"
@@ -79,35 +71,43 @@
     <!-- Editor -->
     <EditorContent :editor="editor" class="editor-content" />
 
-    <!-- Link Dialog Modal -->
-    <div v-if="showLinkDialog" class="link-dialog-overlay" @click.self="closeLinkDialog">
-      <div class="link-dialog">
-        <h3>Link</h3>
-        <div class="link-input-wrapper">
-          <input
-            ref="linkInput"
-            v-model="linkUrl"
-            type="text"
-            placeholder="https://example.com"
-            @keyup.enter="saveLink"
-            @keyup.esc="closeLinkDialog"
-          />
-          <button
-            v-if="linkUrl"
-            @click="linkUrl = ''"
-            class="clear-btn"
-            type="button"
-            title="Clear"
-          >
+    <BaseModal
+      :show="showLinkDialog"
+      :title="$t('editor.link')"
+      :close-label="$t('common.close')"
+      max-width="420px"
+      @close="closeLinkDialog"
+    >
+      <div class="link-input-wrapper">
+        <BaseInput
+          ref="linkInput"
+          v-model="linkUrl"
+          class="link-input"
+          type="text"
+          :placeholder="$t('editor.linkPlaceholder')"
+          @keyup.enter="saveLink"
+          @keyup.esc="closeLinkDialog"
+        />
+        <IconButton
+          v-if="linkUrl"
+          class="clear-link-button"
+          :title="$t('editor.clearLink')"
+          :aria-label="$t('editor.clearLink')"
+          @click="linkUrl = ''"
+        >
             <X :size="16" />
-          </button>
-        </div>
-        <div class="link-dialog-buttons">
-          <button @click="closeLinkDialog" class="cancel-btn">Cancel</button>
-          <button @click="saveLink" class="save-btn">Save</button>
-        </div>
+        </IconButton>
       </div>
-    </div>
+
+      <template #footer>
+        <BaseButton variant="secondary" @click="closeLinkDialog">
+          {{ $t('common.cancel') }}
+        </BaseButton>
+        <BaseButton variant="primary" @click="saveLink">
+          {{ $t('common.save') }}
+        </BaseButton>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -154,6 +154,16 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Italic, Strikethrough, List, ListOrdered, ListTodo, Link as LinkIcon, X, Image as ImageIcon } from 'lucide-vue-next'
+import BaseButton from './ui/BaseButton.vue'
+import BaseInput from './ui/BaseInput.vue'
+import BaseModal from './ui/BaseModal.vue'
+import IconButton from './ui/IconButton.vue'
+import ToolbarButton from './ui/ToolbarButton.vue'
+
+interface InputHandle {
+  focus: () => void
+  select: () => void
+}
 
 interface Props {
   modelValue: string
@@ -203,7 +213,7 @@ const processImage = (file: File): Promise<string> => {
 // Link dialog state
 const showLinkDialog = ref(false)
 const linkUrl = ref('')
-const linkInput = ref<HTMLInputElement>()
+const linkInput = ref<InputHandle | null>(null)
 
 const editor = useEditor({
   extensions: [
@@ -350,37 +360,6 @@ onUnmounted(() => {
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-}
-
-.toolbar button {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 6px 10px;
-  color: var(--text-placeholder);
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.toolbar button:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent);
-}
-
-.toolbar button:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.toolbar button.is-active {
-  background-color: var(--accent);
-  color: var(--text-primary);
-  border-color: var(--accent);
 }
 
 .divider {
@@ -582,120 +561,18 @@ onUnmounted(() => {
   font-style: italic;
 }
 
-/* Link Dialog Modal */
-.link-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-}
-
-.link-dialog {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 24px;
-  min-width: 400px;
-  box-shadow: 0 4px 12px var(--shadow);
-}
-
-.link-dialog h3 {
-  margin: 0 0 16px 0;
-  color: var(--text-primary);
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .link-input-wrapper {
   position: relative;
-  margin-bottom: 16px;
 }
 
-.link-input-wrapper input {
-  width: 100%;
-  padding: 10px 12px;
-  padding-right: 40px; /* Space for X button */
-  background-color: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-primary);
-  font-size: 14px;
+.link-input {
+  padding-right: 44px;
 }
 
-.link-input-wrapper input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.clear-btn {
+.clear-link-button {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.clear-btn:hover {
-  background-color: var(--border);
-  color: var(--text-primary);
-}
-
-.link-dialog-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.link-dialog-buttons button {
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
-}
-
-.cancel-btn {
-  background-color: var(--border);
-  color: var(--text-primary);
-}
-
-.cancel-btn:hover {
-  background-color: var(--border);
-}
-
-.cancel-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.save-btn {
-  background-color: var(--accent);
-  color: var(--text-primary);
-}
-
-.save-btn:hover {
-  background-color: var(--accent-hover);
-}
-
-.save-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 1px var(--accent);
 }
 </style>

@@ -56,12 +56,16 @@
                   <circle cx="11" cy="11" r="8"></circle>
                   <path d="m21 21-4.35-4.35"></path>
                 </svg>
-                <input v-model.trim="searchQuery" type="text" :placeholder="$t('libraryManagement.searchPlaceholder')" />
+                <BaseInput v-model.trim="searchQuery" type="text" :placeholder="$t('libraryManagement.searchPlaceholder')" />
               </label>
 
               <label class="selection-summary" :class="{ 'selection-summary--active': hasSelection }">
-                <input type="checkbox" class="select-all-checkbox" :checked="isAllSelected"
-                  :indeterminate="isIndeterminate" @change="toggleSelectAll" />
+                <BaseCheckbox
+                  class="select-all-checkbox"
+                  :model-value="isAllSelected"
+                  :indeterminate="isIndeterminate"
+                  @update:model-value="toggleSelectAll"
+                />
                 <div class="selection-copy">
                   <span class="selection-count">{{ selectionSummaryTitle }}</span>
                   <span class="selection-subcopy">{{ selectionSummaryDetail }}</span>
@@ -270,6 +274,8 @@
 import { computed, ref, watch } from 'vue'
 import CommandList from './CommandList.vue'
 import TagSelector from './TagSelector.vue'
+import BaseCheckbox from './ui/BaseCheckbox.vue'
+import BaseInput from './ui/BaseInput.vue'
 import { getAllTags, matchesTagFilter } from '../utils/tags'
 import { describeLibraryChanges } from '../utils/library-changes'
 import type { Library, LibraryGitWorkflowSummary } from '../../shared/types'

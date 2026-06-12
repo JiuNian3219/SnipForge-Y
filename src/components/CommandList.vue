@@ -14,11 +14,9 @@
           @click="$emit('toggle', command.id)"
         >
           <div class="checkbox-container">
-            <input
-              type="checkbox"
-              :checked="isSelected(command.id)"
+            <BaseCheckbox
+              :model-value="isSelected(command.id)"
               @click.stop="$emit('toggle', command.id)"
-              class="command-checkbox"
             />
           </div>
 
@@ -41,15 +39,14 @@
       </template>
     </VList>
 
-    <div v-else class="empty-state">
-      <div class="empty-state-title">{{ emptyTitle }}</div>
-      <p class="empty-state-message">{{ emptyMessage }}</p>
-    </div>
+    <EmptyState v-else :title="emptyTitle" :message="emptyMessage" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { VList } from 'virtua/vue'
+import BaseCheckbox from './ui/BaseCheckbox.vue'
+import EmptyState from './ui/EmptyState.vue'
 
 interface Command {
   id: number
@@ -137,42 +134,6 @@ function formatTimestamp(timestamp: string): string {
   flex-shrink: 0;
 }
 
-.command-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--border);
-  border-radius: 3px;
-  background: var(--bg-surface);
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  transition: all 0.15s;
-}
-
-.command-checkbox:checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.command-checkbox:checked::after {
-  content: '';
-  position: absolute;
-  left: 4.5px;
-  top: 1.5px;
-  width: 4px;
-  height: 8px;
-  border: solid var(--bg-app);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.command-checkbox:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .command-details {
   flex: 1;
   min-width: 0;
@@ -235,32 +196,6 @@ function formatTimestamp(timestamp: string): string {
 .command-list-item.selected .command-title,
 .command-list-item.selected .command-updated {
   color: var(--text-primary);
-}
-
-.empty-state {
-  height: 100%;
-  min-height: 240px;
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-}
-
-.empty-state-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.empty-state-message {
-  margin: 0;
-  max-width: 320px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 @media (max-width: 900px) {

@@ -2,55 +2,43 @@
   <div class="markdown-editor">
     <!-- Toolbar -->
     <div class="toolbar">
-      <button
+      <ToolbarButton
         @click="insertBold"
-        type="button"
-        title="Bold"
-        class="toolbar-btn"
+        :title="$t('editor.bold')"
       >
         <Bold :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="insertItalic"
-        type="button"
-        title="Italic"
-        class="toolbar-btn"
+        :title="$t('editor.italic')"
       >
         <Italic :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="insertLink"
-        type="button"
-        title="Link"
-        class="toolbar-btn"
+        :title="$t('editor.link')"
       >
         <Link :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="insertImage"
-        type="button"
-        title="Image"
-        class="toolbar-btn"
+        :title="$t('editor.image')"
       >
         <Image :size="16" />
-      </button>
+      </ToolbarButton>
       <div class="divider"></div>
-      <button
+      <ToolbarButton
         @click="insertList"
-        type="button"
-        title="Bullet List"
-        class="toolbar-btn"
+        :title="$t('editor.bulletList')"
       >
         <List :size="16" />
-      </button>
-      <button
+      </ToolbarButton>
+      <ToolbarButton
         @click="insertNumberedList"
-        type="button"
-        title="Numbered List"
-        class="toolbar-btn"
+        :title="$t('editor.numberedList')"
       >
         <ListOrdered :size="16" />
-      </button>
+      </ToolbarButton>
     </div>
 
     <!-- Editor with syntax highlighting -->
@@ -69,6 +57,7 @@ import { tags } from '@lezer/highlight'
 import { markdown } from '@codemirror/lang-markdown'
 import { Bold, Italic, Link, Image, List, ListOrdered } from 'lucide-vue-next'
 import { theme } from '../utils/theme'
+import ToolbarButton from './ui/ToolbarButton.vue'
 
 const highlightStyle = HighlightStyle.define([
   { tag: [tags.keyword, tags.controlKeyword, tags.operatorKeyword, tags.definitionKeyword, tags.moduleKeyword], color: '#c678dd' },
@@ -266,37 +255,6 @@ onUnmounted(() => {
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-}
-
-.toolbar-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 6px 10px;
-  color: var(--text-placeholder);
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.toolbar-btn:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent);
-}
-
-.toolbar-btn:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.toolbar-btn.is-active {
-  background-color: var(--accent);
-  color: var(--text-primary);
-  border-color: var(--accent);
 }
 
 .divider {

@@ -1,16 +1,15 @@
 <template>
-  <input
-    ref="inputRef"
+  <textarea
+    ref="textareaRef"
     v-bind="$attrs"
-    class="base-input"
+    class="base-textarea"
     :id="id"
-    :type="type"
     :value="modelValue"
     :placeholder="placeholder"
+    :rows="rows"
     :disabled="disabled"
     :maxlength="maxlength"
-    :autocomplete="autocomplete"
-    @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+    @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
   />
 </template>
 
@@ -24,37 +23,36 @@ defineOptions({
 withDefaults(defineProps<{
   modelValue: string
   id?: string
-  type?: string
   placeholder?: string
+  rows?: string | number
   disabled?: boolean
   maxlength?: string | number
-  autocomplete?: string
 }>(), {
   id: undefined,
-  type: 'text',
   placeholder: '',
+  rows: 4,
   disabled: false,
   maxlength: undefined,
-  autocomplete: undefined,
 })
 
 defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const inputRef = ref<HTMLInputElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 defineExpose({
-  focus: () => inputRef.value?.focus(),
-  select: () => inputRef.value?.select(),
-  getElement: () => inputRef.value,
-  element: inputRef,
+  focus: () => textareaRef.value?.focus(),
+  select: () => textareaRef.value?.select(),
+  getElement: () => textareaRef.value,
+  element: textareaRef,
 })
 </script>
 
 <style scoped>
-.base-input {
+.base-textarea {
   width: 100%;
+  min-height: 96px;
   box-sizing: border-box;
   display: block;
   margin: 0;
@@ -65,18 +63,20 @@ defineExpose({
   color: var(--text-primary);
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
 }
 
-.base-input:focus {
+.base-textarea:focus {
   outline: none;
   border-color: var(--accent);
 }
 
-.base-input::placeholder {
+.base-textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-.base-input:disabled {
+.base-textarea:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }

@@ -10,6 +10,9 @@ import DescriptionModal from './components/domain/shell/DescriptionModal.vue'
 import TagSelector from './components/TagSelector.vue'
 import DuplicateResolutionModal from './components/domain/commands/DuplicateResolutionModal.vue'
 import UpdateBanner from './components/domain/shell/UpdateBanner.vue'
+import BaseButton from './components/ui/BaseButton.vue'
+import BaseInput from './components/ui/BaseInput.vue'
+import IconButton from './components/ui/IconButton.vue'
 import { Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus } from 'lucide-vue-next'
 import { VList } from 'virtua/vue'
 import { extractVariables, substituteVariables, hasVariables, highlightVariables, type VariableValues } from './utils/variables'
@@ -24,6 +27,11 @@ import { useI18n } from 'vue-i18n'
 import type { CommandWithTags, Library } from '../shared/types'
 
 type Command = CommandWithTags
+
+interface InputHandle {
+  focus: () => void
+  select: () => void
+}
 
 // ── Settings ───────────────────────────────────────────────────
 const { settings } = useSettings()
@@ -75,7 +83,7 @@ const checkMaximizedState = async () => {
 // Search query refs
 const searchQuery = ref('')  // Immediate value (updates on every keystroke)
 const debouncedSearchQuery = refDebounced(searchQuery, 200)  // Debounced value (updates after typing stops)
-const searchInputRef = ref<HTMLInputElement>()
+const searchInputRef = ref<InputHandle | null>(null)
 
 // Tag filtering state
 const selectedTags = ref<string[]>([])
@@ -1040,7 +1048,8 @@ const openDescriptionModal = (title: string, description: string) => {
       <!-- Middle section: Search bar -->
       <div class="middle-section search-container">
         <div class="search-wrapper">
-          <input type="text"
+          <BaseInput
+            type="text"
             ref="searchInputRef"
             :placeholder="$t('app.searchPlaceholder')"
             v-model="searchQuery"
@@ -1048,7 +1057,7 @@ const openDescriptionModal = (title: string, description: string) => {
             @focus="selectedCommandId = null"
             class="search-input"
           />
-          <button
+          <IconButton
             @click="toggleFilterDropdown"
             :class="['filter-button', { active: selectedTags.length > 0, open: showFilterDropdown }]"
             :title="$t('app.filterByTags')"
@@ -1056,7 +1065,7 @@ const openDescriptionModal = (title: string, description: string) => {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
             </svg>
-          </button>
+          </IconButton>
 
           <!-- Tag selector dropdown -->
           <div v-if="showFilterDropdown" class="filter-dropdown" @click.stop>
@@ -1073,24 +1082,24 @@ const openDescriptionModal = (title: string, description: string) => {
 
       <!-- Right section: Control buttons -->
       <div class="right-section">
-        <button class="add-button" @click="modalMode = 'add'; selectedCommandForEdit = null; showModal = true" :title="$t('app.addCommandTitle')">
+        <IconButton class="add-button" variant="primary" @click="modalMode = 'add'; selectedCommandForEdit = null; showModal = true" :title="$t('app.addCommandTitle')">
           <CirclePlus :size="18" />
-        </button>
-        <button class="help-button" @click="showHelpModal = true" :title="$t('app.helpTitle')">
+        </IconButton>
+        <IconButton class="help-button" @click="showHelpModal = true" :title="$t('app.helpTitle')">
           <HelpCircle :size="16" />
-        </button>
-        <button class="settings-button" @click="showSettingsModal = true" :title="$t('app.settingsTitle')">
+        </IconButton>
+        <IconButton class="settings-button" @click="showSettingsModal = true" :title="$t('app.settingsTitle')">
           <Settings :size="18" />
-        </button>
+        </IconButton>
 
         <!-- Windows window controls -->
         <div v-if="isWindows" class="window-controls">
-          <button class="window-control-btn minimize-btn" @click="minimizeWindow" :title="$t('app.minimize')">
+          <IconButton class="window-control-btn minimize-btn" @click="minimizeWindow" :title="$t('app.minimize')">
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
             </svg>
-          </button>
-          <button class="window-control-btn maximize-btn" @click="maximizeWindow" :title="isMaximized ? $t('app.restore') : $t('app.maximize')">
+          </IconButton>
+          <IconButton class="window-control-btn maximize-btn" @click="maximizeWindow" :title="isMaximized ? $t('app.restore') : $t('app.maximize')">
             <svg v-if="!isMaximized" width="12" height="12" viewBox="0 0 12 12">
               <rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
@@ -1098,12 +1107,12 @@ const openDescriptionModal = (title: string, description: string) => {
               <rect x="2" y="0" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
               <rect x="0" y="2" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
-          </button>
-          <button class="window-control-btn close-btn-window" @click="closeWindow" :title="$t('app.close')">
+          </IconButton>
+          <IconButton class="window-control-btn close-btn-window" variant="danger" @click="closeWindow" :title="$t('app.close')">
             <svg width="12" height="12" viewBox="0 0 12 12">
               <path d="M 1,1 L 11,11 M 11,1 L 1,11" stroke="currentColor" stroke-width="1.5"/>
             </svg>
-          </button>
+          </IconButton>
         </div>
       </div>
     </div>
@@ -1140,7 +1149,7 @@ const openDescriptionModal = (title: string, description: string) => {
                     <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
                   </svg>
                 </span>
-                <button
+                <IconButton
                   v-if="command.description"
                   class="info-icon"
                   @click.stop="openDescriptionModal(command.title, command.description)"
@@ -1148,7 +1157,7 @@ const openDescriptionModal = (title: string, description: string) => {
                   :title="getDescriptionTooltip(command.id, command.description)"
                 >
                   <HelpCircle :size="14" />
-                </button>
+                </IconButton>
               </div>
               <div class="command-body" v-html="getCommandPreview(command.body, command.language)"></div>
               <div v-if="settings['display.tagPills'] !== false && command.tagsArray && command.tagsArray.length > 0" class="command-tags">
@@ -1156,12 +1165,12 @@ const openDescriptionModal = (title: string, description: string) => {
               </div>
             </div>
             <div class="command-actions">
-              <button @click.stop="editCommand(command.id)" tabindex="-1" :title="$t('app.editCommand')">
+              <IconButton @click.stop="editCommand(command.id)" tabindex="-1" :title="$t('app.editCommand')">
                 <Edit :size="16" />
-              </button>
-              <button @click.stop="deleteCommand(command.id)" tabindex="-1" :title="$t('app.deleteCommand')">
+              </IconButton>
+              <IconButton variant="danger" @click.stop="deleteCommand(command.id)" tabindex="-1" :title="$t('app.deleteCommand')">
                 <Trash2 :size="16" />
-              </button>
+              </IconButton>
             </div>
           </div>
         </template>
@@ -1180,13 +1189,13 @@ const openDescriptionModal = (title: string, description: string) => {
           {{ $t('app.firstRunDescription', { manifest: '.snipforge.json' }) }}
         </p>
         <p v-if="firstRunSetupError" class="first-run-error">{{ firstRunSetupError }}</p>
-        <button
+        <BaseButton
           class="first-run-button"
           :disabled="firstRunSetupLoading"
           @click="handleChooseDefaultWritableLibrary"
         >
           {{ firstRunSetupLoading ? $t('app.choosing') : $t('app.chooseFolder') }}
-        </button>
+        </BaseButton>
         <p class="first-run-note">
           {{ $t('app.firstRunRequired') }}
         </p>

@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 withDefaults(defineProps<{
-  variant?: 'subtle' | 'secondary' | 'danger'
+  variant?: 'subtle' | 'secondary' | 'primary' | 'danger'
   size?: 'sm' | 'md'
   title?: string
   ariaLabel?: string
@@ -60,6 +60,11 @@ withDefaults(defineProps<{
   border-color: var(--border);
 }
 
+.icon-button--primary {
+  background: transparent;
+  color: var(--accent);
+}
+
 .icon-button--danger {
   background: transparent;
   color: var(--text-tertiary);
@@ -73,6 +78,11 @@ withDefaults(defineProps<{
 .icon-button--danger:hover:not(:disabled) {
   background: var(--danger);
   border-color: var(--danger);
+}
+
+.icon-button--primary:hover:not(:disabled) {
+  background: var(--accent-glow);
+  color: var(--accent-light);
 }
 
 .icon-button:disabled {
