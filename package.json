@@ -32,6 +32,8 @@
     "cli": "node ./bin/snipforge.mjs",
     "dev": "node scripts/dev-app.mjs",
     "dev:debug": "node scripts/dev-app.mjs 9222",
+    "dev:rebuild": "node scripts/dev-app.mjs --rebuild",
+    "dev:debug:rebuild": "node scripts/dev-app.mjs --rebuild 9222",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
     "preview": "vite preview",
     "test:db": "node scripts/test-db.mjs",

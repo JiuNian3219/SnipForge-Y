@@ -33,12 +33,18 @@ function run(command, args, extraEnv = {}) {
   }
 }
 
-const debugPort = process.argv[2]
+const args = process.argv.slice(2)
+const shouldRebuildDeps = args.includes('--rebuild') || process.env.SNIPFORGE_REBUILD_DEPS === '1'
+const debugPort = args.find(arg => arg !== '--rebuild')
 
-// Keep the native addon ABI aligned with Electron before starting Vite dev.
-run('pnpm', ['exec', 'electron-builder', 'install-app-deps'], {
-  HOME: homeDir,
-  npm_config_cache: npmCacheDir,
-  npm_config_devdir: electronGypDir,
-})
+// Rebuild native addons only when explicitly requested. On Windows with pnpm 11,
+// electron-builder can try to execute pnpm.mjs directly and fail before dev starts.
+if (shouldRebuildDeps) {
+  run('pnpm', ['exec', 'electron-builder', 'install-app-deps'], {
+    HOME: homeDir,
+    npm_config_cache: npmCacheDir,
+    npm_config_devdir: electronGypDir,
+  })
+}
+
 run('pnpm', ['exec', 'vite'], debugPort ? { REMOTE_DEBUG: debugPort } : {})
