@@ -15,9 +15,13 @@ mkdirSync(npmCacheDir, { recursive: true })
 mkdirSync(electronGypDir, { recursive: true })
 
 function run(command, args, extraEnv = {}) {
-  const result = spawnSync(command, args, {
+  const executable = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : command
+  const commandArgs = process.platform === 'win32'
+    ? ['/d', '/s', '/c', command, ...args]
+    : args
+  const result = spawnSync(executable, commandArgs, {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     env: {
       ...process.env,
       ...extraEnv,
