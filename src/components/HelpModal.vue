@@ -2,14 +2,14 @@
   <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Help</h2>
+        <h2>{{ $t('app.helpTitle') }}</h2>
         <button class="close-button" @click="$emit('cancel')">×</button>
       </div>
       <div class="modal-body">
         <div v-html="markdownContent" class="markdown-content" @click="handleLinkClick"></div>
       </div>
       <div class="modal-footer">
-        <button @click="$emit('cancel')" class="close-button-footer">Got it!</button>
+        <button @click="$emit('cancel')" class="close-button-footer">{{ $t('common.close') }}</button>
       </div>
     </div>
   </div>

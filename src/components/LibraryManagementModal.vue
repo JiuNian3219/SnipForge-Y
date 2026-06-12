@@ -21,19 +21,19 @@
 
         <div class="library-management-header-controls">
           <div class="library-header-actions">
-            <button v-if="embedded" class="library-action-btn subtle workspace-back-button" @click="handleClose" title="Back to libraries">
-              ← Libraries
+            <button v-if="embedded" class="library-action-btn subtle workspace-back-button" @click="handleClose" :title="$t('libraryManagement.backToLibraries')">
+              ← {{ $t('libraryManagement.backToLibraries') }}
             </button>
             <button class="library-action-btn subtle" @click="$emit('refresh')" :disabled="syncing"
-              title="Refresh library status">
-              Refresh
+              :title="$t('libraryManagement.refreshStatus')">
+              {{ $t('libraryManagement.refresh') }}
             </button>
             <button v-if="changesSummary.canSync" @click="$emit('sync', library.id)" class="library-action-btn subtle library-action-btn--primary"
               :disabled="syncing" :title="changesSummary.syncTitle">
-              {{ syncing ? 'Syncing...' : 'Sync' }}
+              {{ syncing ? $t('settings.libraries.syncing') : $t('settings.libraries.sync') }}
             </button>
             <button v-if="canImportIntoManagedLibrary" @click="$emit('import')" class="action-button import-button">
-              Import
+              {{ $t('common.import') }}
             </button>
           </div>
           <button v-if="!embedded" class="library-management-close" @click="handleClose" aria-label="Close library management">×</button>
@@ -44,7 +44,7 @@
         <section class="management-section management-section--commands">
           <div class="section-header-row section-header-row--commands">
             <div>
-              <h4>Commands</h4>
+              <h4>{{ $t('libraryManagement.commands') }}</h4>
               <p>{{ commandListNote }}</p>
             </div>
           </div>
@@ -56,7 +56,7 @@
                   <circle cx="11" cy="11" r="8"></circle>
                   <path d="m21 21-4.35-4.35"></path>
                 </svg>
-                <input v-model.trim="searchQuery" type="text" placeholder="Search title, body, description, or tags" />
+                <input v-model.trim="searchQuery" type="text" :placeholder="$t('libraryManagement.searchPlaceholder')" />
               </label>
 
               <label class="selection-summary" :class="{ 'selection-summary--active': hasSelection }">
@@ -74,18 +74,18 @@
                 <div class="filter-dropdown-wrap" @click.stop>
                   <button @click="toggleManagementFilterDropdown"
                     :class="['toolbar-filter-button', { active: selectedManagementTags.length > 0 }]"
-                    title="Filter by tags">
+                    :title="$t('app.filterByTags')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
                     </svg>
-                    <span>Tags</span>
+                    <span>{{ $t('libraryManagement.tags') }}</span>
                     <span v-if="selectedManagementTags.length > 0" class="toolbar-filter-count">{{
                       selectedManagementTags.length }}</span>
                   </button>
 
                   <div v-if="showManagementFilterDropdown" class="filter-dropdown">
                     <TagSelector :available-tags="availableTags" :selected-tags="selectedManagementTags"
-                      title="Filter by Tags" @toggle="toggleManagementTag" @clear-all="clearManagementTags" />
+                      :title="$t('libraryManagement.filterByTags')" @toggle="toggleManagementTag" @clear-all="clearManagementTags" />
                   </div>
                 </div>
               </div>
@@ -94,22 +94,22 @@
                 <div class="export-dropdown-wrap" @click.stop>
                   <button @click="toggleExportDropdown" :disabled="selectedCommandIds.length === 0"
                     :class="['action-button', 'export-button', { 'action-button--ready': hasSelection }]">
-                    Export
+                    {{ $t('libraryManagement.export') }}
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                       stroke-linecap="round" stroke-linejoin="round">
                       <path d="m6 9 6 6 6-6"></path>
                     </svg>
                   </button>
                   <div v-if="showExportDropdown" class="export-dropdown">
-                    <button class="export-dropdown-item" @click="handleExportBundle">As Bundle (.json)</button>
-                    <button class="export-dropdown-item" @click="handleExportAsLibrary">As Library (.zip)</button>
+                    <button class="export-dropdown-item" @click="handleExportBundle">{{ $t('libraryManagement.asBundle') }}</button>
+                    <button class="export-dropdown-item" @click="handleExportAsLibrary">{{ $t('libraryManagement.asLibrary') }}</button>
                   </div>
                 </div>
 
                 <button v-if="canDeleteManagedCommands" @click="handleBulkDelete"
                   :disabled="selectedCommandIds.length === 0" class="action-button delete-button"
-                  title="Delete selected commands">
-                  Delete Selected
+                  :title="$t('libraryManagement.deleteSelected')">
+                  {{ $t('libraryManagement.deleteSelected') }}
                 </button>
               </div>
             </div>
@@ -124,26 +124,26 @@
         <section class="management-section management-section--summary">
           <div class="section-header-row">
             <div>
-              <h4>Library</h4>
+              <h4>{{ $t('libraryManagement.library') }}</h4>
               <p>{{ libraryOverviewNote }}</p>
             </div>
           </div>
 
           <div class="overview-grid">
             <div class="overview-stat">
-              <span class="detail-label">Commands</span>
+              <span class="detail-label">{{ $t('libraryManagement.commands') }}</span>
               <span class="detail-value">{{ commands.length }}</span>
             </div>
             <div class="overview-stat">
-              <span class="detail-label">Visible</span>
+              <span class="detail-label">{{ $t('libraryManagement.visible') }}</span>
               <span class="detail-value">{{ filteredManagementCommands.length }}</span>
             </div>
             <div class="overview-stat">
-              <span class="detail-label">Selected</span>
+              <span class="detail-label">{{ $t('libraryManagement.selected') }}</span>
               <span class="detail-value">{{ selectedCommandIds.length }}</span>
             </div>
             <div class="overview-stat">
-              <span class="detail-label">Access</span>
+              <span class="detail-label">{{ $t('libraryManagement.access') }}</span>
               <span class="detail-value">{{ accessLabel }}</span>
               <span class="detail-meta">{{ accessDetail }}</span>
             </div>
@@ -155,29 +155,29 @@
         <section class="management-section management-section--status">
           <div class="section-header-row">
             <div>
-              <h4>Library status</h4>
+              <h4>{{ $t('libraryManagement.status') }}</h4>
               <p>{{ changesSummary.headline }}. {{ changesSummary.detail }}</p>
             </div>
           </div>
 
           <div class="details-grid">
             <div class="detail-card">
-              <span class="detail-label">Origin</span>
-              <span class="detail-value">{{ library.origin ? 'Origin-backed' : 'Local only' }}</span>
-              <span class="detail-meta">{{ library.origin?.url || 'No remote origin configured.' }}</span>
+              <span class="detail-label">{{ $t('libraryManagement.origin') }}</span>
+              <span class="detail-value">{{ library.origin ? $t('libraryManagement.originBacked') : $t('libraryManagement.localOnly') }}</span>
+              <span class="detail-meta">{{ library.origin?.url || $t('libraryManagement.noRemoteOrigin') }}</span>
             </div>
             <div class="detail-card">
-              <span class="detail-label">Working tree</span>
+              <span class="detail-label">{{ $t('libraryManagement.workingTree') }}</span>
               <span class="detail-value" :class="`detail-value--${changesSummary.tone}`">{{ workingTreeLabel }}</span>
               <span class="detail-meta">{{ workingTreeDetail }}</span>
             </div>
             <div v-if="library.working_tree.state === 'dirty' || library.working_tree.state === 'clean'"
               class="detail-card">
-              <span class="detail-label">File summary</span>
+              <span class="detail-label">{{ $t('libraryManagement.fileSummary') }}</span>
               <div class="library-change-counts">
-                <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> modified</span>
-                <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> new</span>
-                <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> deleted</span>
+                <span class="library-change-count"><strong>{{ library.working_tree.modified }}</strong> {{ $t('libraryManagement.modified') }}</span>
+                <span class="library-change-count"><strong>{{ library.working_tree.added }}</strong> {{ $t('libraryManagement.new') }}</span>
+                <span class="library-change-count"><strong>{{ library.working_tree.deleted }}</strong> {{ $t('libraryManagement.deleted') }}</span>
               </div>
             </div>
           </div>
@@ -185,29 +185,29 @@
 
         <details v-if="library.origin" class="workflow-disclosure management-section management-section--workflow">
           <summary class="workflow-disclosure-summary">
-            <span>Origin workflow</span>
-            <span class="workflow-disclosure-copy">Git and remote actions for this library</span>
+            <span>{{ $t('libraryManagement.originWorkflow') }}</span>
+            <span class="workflow-disclosure-copy">{{ $t('libraryManagement.originWorkflowDesc') }}</span>
           </summary>
 
           <div class="workflow-disclosure-body">
             <div class="workflow-summary-copy">
               <p v-if="workflowSummary">{{ workflowSummary.headline }}. {{ workflowSummary.detail }}</p>
               <p v-else-if="workflowError" class="workflow-copy workflow-copy--danger">{{ workflowError }}</p>
-              <p v-else>Checking git-backed workflow support for this library.</p>
+              <p v-else>{{ $t('libraryManagement.checkingWorkflow') }}</p>
             </div>
 
             <div class="details-grid workflow-details-grid">
               <div class="detail-card">
-                <span class="detail-label">Remote</span>
-                <span class="detail-value">{{ workflowSummary?.remote_name || 'Unavailable' }}</span>
+                <span class="detail-label">{{ $t('libraryManagement.remote') }}</span>
+                <span class="detail-value">{{ workflowSummary?.remote_name || $t('libraryManagement.unavailable') }}</span>
                 <span class="detail-meta">{{ library.origin.url }}</span>
               </div>
               <div class="detail-card">
-                <span class="detail-label">Branch</span>
-                <span class="detail-value">{{ workflowSummary?.current_branch || 'Detached / unknown' }}</span>
-                <span class="detail-meta">Base: {{ workflowSummary?.default_branch || 'Unknown' }}</span>
+                <span class="detail-label">{{ $t('libraryManagement.branch') }}</span>
+                <span class="detail-value">{{ workflowSummary?.current_branch || $t('libraryManagement.detached') }}</span>
+                <span class="detail-meta">{{ $t('libraryManagement.base', { branch: workflowSummary?.default_branch || $t('libraryManagement.unknown') }) }}</span>
                 <span class="detail-meta">
-                  {{ workflowSummary?.has_upstream ? 'Tracks an upstream branch.' : 'No upstream branch configured.' }}
+                  {{ workflowSummary?.has_upstream ? $t('libraryManagement.tracksUpstream') : $t('libraryManagement.noUpstream') }}
                 </span>
               </div>
             </div>

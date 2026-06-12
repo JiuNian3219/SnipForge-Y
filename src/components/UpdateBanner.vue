@@ -56,9 +56,9 @@ async function handleRemindLater() {
 <template>
   <Transition name="update-banner">
     <div v-if="status.showBanner" class="update-banner">
-      <span class="update-text">New version is out</span>
-      <button class="update-btn" @click="handleUpdate">update</button>
-      <button class="remind-btn" @click="handleRemindLater">remind me later</button>
+      <span class="update-text">{{ $t('updateBanner.text') }}</span>
+      <button class="update-btn" @click="handleUpdate">{{ $t('updateBanner.update') }}</button>
+      <button class="remind-btn" @click="handleRemindLater">{{ $t('updateBanner.remindLater') }}</button>
     </div>
   </Transition>
 </template>

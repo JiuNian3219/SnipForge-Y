@@ -1,8 +1,8 @@
 <template>
   <div class="tag-selector">
     <div class="tag-selector-header">
-      <span>{{ title }}</span>
-      <button @click="$emit('clear-all')" class="clear-all-btn">Clear All</button>
+      <span>{{ displayTitle }}</span>
+      <button @click="$emit('clear-all')" class="clear-all-btn">{{ $t('tagSelector.clearAll') }}</button>
     </div>
 
     <div class="tag-search">
@@ -10,7 +10,7 @@
         ref="searchInputRef"
         v-model="searchQuery"
         type="text"
-        placeholder="Search tags..."
+        :placeholder="$t('tagSelector.searchPlaceholder')"
         class="tag-search-input"
       />
     </div>
@@ -33,7 +33,7 @@
     </VList>
 
     <div v-else class="empty-state">
-      {{ searchQuery ? 'No matching tags' : 'No tags available' }}
+      {{ searchQuery ? $t('tagSelector.noMatching') : $t('tagSelector.noTags') }}
     </div>
   </div>
 </template>
@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { VList } from 'virtua/vue'
+import { useI18n } from 'vue-i18n'
 
 interface Props {
   availableTags: string[]
@@ -49,8 +50,10 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: 'Select Tags'
+  title: ''
 })
+
+const { t } = useI18n()
 
 defineEmits<{
   toggle: [tag: string]
@@ -59,6 +62,7 @@ defineEmits<{
 
 const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const displayTitle = computed(() => props.title || t('tagSelector.selectTags'))
 
 onMounted(() => {
   nextTick(() => searchInputRef.value?.focus())

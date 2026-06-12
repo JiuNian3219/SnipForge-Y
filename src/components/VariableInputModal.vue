@@ -2,12 +2,12 @@
   <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Enter Variable Values</h2>
+        <h2>{{ $t('variableModal.title') }}</h2>
         <button class="close-button" @click="$emit('cancel')">×</button>
       </div>
       <div class="modal-body">
         <div class="variable-info">
-          <p>Please provide values for the following variables:</p>
+          <p>{{ $t('variableModal.description') }}</p>
         </div>
         <div v-for="variable in variables" :key="variable" class="form-group">
           <label :for="variable">{{ variable }}:</label>
@@ -15,15 +15,15 @@
             :id="variable"
             v-model="values[variable]"
             type="text"
-            :placeholder="`Enter value for ${variable}`"
+            :placeholder="$t('variableModal.placeholder', { variable })"
             :ref="el => { if (el) inputRefs[variable] = el as HTMLInputElement }"
           />
         </div>
       </div>
       <div class="modal-footer">
-        <button @click="$emit('cancel')" class="cancel-button">Cancel</button>
+        <button @click="$emit('cancel')" class="cancel-button">{{ $t('common.cancel') }}</button>
         <button @click="handleSubmit" class="save-button">
-          Copy Command
+          {{ $t('variableModal.copyCommand') }}
         </button>
       </div>
     </div>
@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 // Props
 interface Props {
@@ -40,6 +41,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
 // Emits
 const emit = defineEmits<{
@@ -81,7 +83,7 @@ const handleSubmit = () => {
   const emptyVariables = props.variables.filter(variable => !values[variable]?.trim())
 
   if (emptyVariables.length > 0) {
-    alert(`Please provide values for: ${emptyVariables.join(', ')}`)
+    alert(t('variableModal.missingValues', { variables: emptyVariables.join(', ') }))
     return
   }
 

@@ -26,6 +26,7 @@ export const DEFAULT_SHORTCUTS: Record<string, string> = {
 
 const DEFAULTS: Record<string, unknown> = {
   'general.hotkey': 'CommandOrControl+Shift+Space',
+  'general.language': 'system',
   'general.windowState': null as WindowState | null,
   'library.autoSync': false, // master toggle for auto-sync
   'library.defaultWritableLocalLibraryId': null as number | null,

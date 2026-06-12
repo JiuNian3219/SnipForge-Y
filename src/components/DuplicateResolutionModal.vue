@@ -2,30 +2,30 @@
   <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>Duplicate Commands Found</h2>
+        <h2>{{ $t('duplicateModal.title') }}</h2>
         <button class="close-button" @click="$emit('cancel')">×</button>
       </div>
 
       <div class="modal-body">
         <div class="duplicate-icon">⚠️</div>
         <p class="info-text">
-          Found <strong>{{ duplicates.length }}</strong> duplicate command{{ duplicates.length > 1 ? 's' : '' }} with matching content.
+          {{ $t('duplicateModal.found', { count: duplicates.length, plural: duplicates.length > 1 ? 's' : '' }) }}
         </p>
         <p class="sub-text">
-          How would you like to handle them?
+          {{ $t('duplicateModal.prompt') }}
         </p>
       </div>
 
       <div class="modal-footer">
         <button @click="$emit('cancel')" class="cancel-button">
-          Cancel Import
+          {{ $t('duplicateModal.cancelImport') }}
         </button>
         <div class="spacer"></div>
         <button @click="handleChoice('skip')" class="choice-button">
-          Keep Existing
+          {{ $t('duplicateModal.keepExisting') }}
         </button>
         <button @click="handleChoice('replace')" class="choice-button primary">
-          Replace with New
+          {{ $t('duplicateModal.replaceWithNew') }}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { ref, onMounted } from 'vue'
+import { applyLanguageSetting } from '../i18n'
 
 const settings = ref<Record<string, unknown>>({})
 const loaded = ref(false)
@@ -6,9 +7,11 @@ const loaded = ref(false)
 async function load() {
   try {
     settings.value = await window.electronAPI.settings.getAll()
+    applyLanguageSetting(settings.value['general.language'])
   } catch (e) {
     console.warn('[useSettings] Failed to load settings:', e)
     settings.value = {}
+    applyLanguageSetting('system')
   }
   loaded.value = true
 }
@@ -18,6 +21,9 @@ async function updateSetting(key: string, value: unknown): Promise<{ success: bo
     const result = await window.electronAPI.settings.set(key, value)
     if (result.success) {
       settings.value = { ...settings.value, [key]: value }
+      if (key === 'general.language') {
+        applyLanguageSetting(value)
+      }
     } else {
       console.warn(`[useSettings] Failed to set "${key}":`, result.error)
     }

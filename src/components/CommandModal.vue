@@ -2,17 +2,17 @@
     <div v-if="show" class="modal-overlay" @click.self="$emit('cancel')">
         <div class="modal-content">
             <div class ="modal-header">
-                <h2>{{ mode === 'add' ? 'Add New Command' : 'Edit Command' }}</h2>
+                <h2>{{ mode === 'add' ? $t('commandModal.addTitle') : $t('commandModal.editTitle') }}</h2>
                 <button class="close-button" @click="$emit('cancel')">x</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="title">Title:</label>
+                    <label for="title">{{ $t('commandModal.title') }}</label>
                     <input
                         id="title"
                         v-model="formData.title"
                         type="text"
-                        placeholder="Enter command title"
+                        :placeholder="$t('commandModal.titlePlaceholder')"
                         ref="titleInput"
                         maxlength="500"
                     />
@@ -20,7 +20,7 @@
 
                 <div class="form-group">
                     <div class="field-header">
-                        <label for="body">Command:</label>
+                        <label for="body">{{ $t('commandModal.command') }}</label>
                         <div class="language-dropdown" ref="languageDropdownRef">
                             <button
                                 type="button"
@@ -47,40 +47,40 @@
                         v-if="isCodeLanguage(formData.language)"
                         v-model="formData.body"
                         :language="formData.language"
-                        placeholder="Enter code..."
+                        :placeholder="$t('commandModal.codePlaceholder')"
                     />
                     <!-- Markdown editor with toolbar -->
                     <MarkdownEditor
                         v-else-if="formData.language === 'markdown'"
                         v-model="formData.body"
-                        placeholder="Write markdown..."
+                        :placeholder="$t('commandModal.markdownPlaceholder')"
                     />
                     <!-- Rich text WYSIWYG editor -->
                     <RichTextEditor
                         v-else-if="formData.language === 'richtext'"
                         v-model="formData.body"
-                        placeholder="Start typing..."
+                        :placeholder="$t('commandModal.richTextPlaceholder')"
                     />
                     <!-- Plain text fallback -->
                     <textarea
                         v-else
                         id="body"
                         v-model="formData.body"
-                        placeholder="Enter command body"
+                        :placeholder="$t('commandModal.bodyPlaceholder')"
                         rows="10"
                         class="plain-textarea"
                     ></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="tags">Tags (comma separated - Press Tab to autocomplete):</label>
+                    <label for="tags">{{ $t('commandModal.tags') }}</label>
                     <div class="autocomplete-container">
                         <input
                             id="tags"
                             ref="tagsInputRef"
                             v-model="tagsInput"
                             type="text"
-                            placeholder="e.g. git, docker, linux"
+                            :placeholder="$t('commandModal.tagsPlaceholder')"
                             @input="handleTagInput"
                             @keydown="handleTagKeydown"
                             @click="updateInlineSuggestion"
@@ -98,19 +98,19 @@
 
                 <div class="form-group">
                     <div class="field-header">
-                        <label for="description">Description (Markdown - optional):</label>
+                        <label for="description">{{ $t('commandModal.description') }}</label>
                     </div>
                     <!-- Always-editable markdown editor -->
                     <MarkdownEditor
                         v-model="formData.description"
-                        placeholder="Add a description for this snippet (optional)..."
+                        :placeholder="$t('commandModal.descriptionPlaceholder')"
                     />
                 </div>
             </div>
             <div class="modal-footer">
-                <button @click="$emit('cancel')" class="cancel-button">Cancel</button>
+                <button @click="$emit('cancel')" class="cancel-button">{{ $t('common.cancel') }}</button>
                 <button @click="handleSave" class="save-button">
-                    {{ mode === 'add' ? 'Add Command' : 'Save Changes' }}
+                    {{ mode === 'add' ? $t('commandModal.addCommand') : $t('commandModal.saveChanges') }}
                 </button>
             </div>
         </div>

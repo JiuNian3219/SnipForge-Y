@@ -9,7 +9,7 @@
         <div v-html="renderedDescription" class="markdown-content" @click="handleLinkClick"></div>
       </div>
       <div class="modal-footer">
-        <button @click="$emit('cancel')" class="close-button-footer">Close</button>
+        <button @click="$emit('cancel')" class="close-button-footer">{{ $t('common.close') }}</button>
       </div>
     </div>
   </div>
@@ -19,6 +19,7 @@
 import { computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { useI18n } from 'vue-i18n'
 
 // Props
 interface Props {
@@ -28,6 +29,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
 // Emits
 defineEmits<{
@@ -63,7 +65,7 @@ const handleLinkClick = async (event: MouseEvent) => {
     }
 
     if (url) {
-      const confirmed = confirm(`You are about to navigate to:\n\n${url}\n\nDo you want to continue?`)
+      const confirmed = confirm(t('descriptionModal.externalLinkConfirm', { url }))
       if (confirmed) {
         await (window as any).electronAPI.shell.openExternal(url)
       }

@@ -20,12 +20,14 @@ import { getAllTags, matchesTagFilter } from './utils/tags'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
+import { useI18n } from 'vue-i18n'
 import type { CommandWithTags, Library } from '../shared/types'
 
 type Command = CommandWithTags
 
 // ── Settings ───────────────────────────────────────────────────
 const { settings } = useSettings()
+const { t } = useI18n()
 
 // Platform detection - use the synchronous platform property
 const isWindows = ref(false)
@@ -203,11 +205,15 @@ async function handleChooseDefaultWritableLibrary() {
 
       const migration = result.legacyMigration
       if (migration?.migrated) {
-        showNotificationToast(`Default library set to ${result.library.name}. Migrated ${migration.migrated} existing command${migration.migrated !== 1 ? 's' : ''}.`, 3500)
+        showNotificationToast(t('notifications.defaultLibraryMigrated', {
+          name: result.library.name,
+          count: migration.migrated,
+          plural: migration.migrated !== 1 ? 's' : '',
+        }), 3500)
       } else if (migration && !migration.completed && migration.errors.length > 0) {
-        showNotificationToast(`Default library set, but existing command migration needs retry: ${migration.errors[0]}`, 5000)
+        showNotificationToast(t('notifications.defaultLibraryMigrationRetry', { error: migration.errors[0] }), 5000)
       } else {
-        showNotificationToast(`Default library set to ${result.library.name}`)
+        showNotificationToast(t('notifications.defaultLibrarySet', { name: result.library.name }))
       }
       return
     }
@@ -423,13 +429,13 @@ const copyToClipboard = async (text: string, language: string = 'plaintext') => 
       const preview = plainText.length > 60 ? plainText.substring(0, 60).trimEnd() + '...' : plainText
       // Collapse whitespace for cleaner preview
       const cleanPreview = preview.replace(/\s+/g, ' ').trim()
-      showNotificationToast(`Copied: ${cleanPreview}`)
+      showNotificationToast(t('notifications.copiedPreview', { preview: cleanPreview }))
     } else {
-      showNotificationToast('Copied to clipboard!')
+      showNotificationToast(t('notifications.copied'))
     }
   } catch (error) {
     console.error('Error copying command to clipboard:', error)
-    showNotificationToast('Failed to copy')
+    showNotificationToast(t('notifications.copyFailed'))
   }
 }
 
@@ -473,15 +479,15 @@ const handleExport = async (filterTags: string[]) => {
       // Write file
       const writeResult = await window.electronAPI.file.writeFile(result.filePath, content)
       if (writeResult.success) {
-        alert(`Successfully exported ${exportData.total_commands} commands!`)
+        alert(t('notifications.exportSuccess', { count: exportData.total_commands }))
       } else {
         console.error('Export failed:', writeResult.error)
-        alert('Failed to save export file')
+        alert(t('notifications.failedSaveExport'))
       }
     }
   } catch (error) {
     console.error('Export error:', error)
-    alert('Export failed: ' + (error instanceof Error ? error.message : String(error)))
+    alert(t('notifications.exportFailedWithError', { error: error instanceof Error ? error.message : String(error) }))
   }
 }
 
@@ -538,12 +544,12 @@ const handleImport = async () => {
           await processImport(commandsToImport, [])
         }
       } else {
-        alert('Failed to read import file')
+        alert(t('notifications.failedReadImport'))
       }
     }
   } catch (error) {
     console.error('Import error:', error)
-    alert('Import failed: ' + (error instanceof Error ? error.message : String(error)))
+    alert(t('notifications.importFailedWithError', { error: error instanceof Error ? error.message : String(error) }))
   }
 }
 
@@ -652,24 +658,24 @@ const processImport = async (commandsToAdd: ImportCommand[], idsToReplace: numbe
     const parts: string[] = []
 
     if (successCount > 0) {
-      parts.push(`✓ Imported ${successCount} command(s)`)
+      parts.push(t('notifications.importedCommands', { count: successCount }))
     }
     if (replacedCount > 0) {
-      parts.push(`✓ Replaced ${replacedCount} existing command(s)`)
+      parts.push(t('notifications.replacedCommands', { count: replacedCount }))
     }
     if (skippedCount > 0) {
-      parts.push(`• Kept ${skippedCount} existing command(s) unchanged`)
+      parts.push(t('notifications.keptCommands', { count: skippedCount }))
     }
     if (errorCount > 0) {
-      parts.push(`✗ Failed to import ${errorCount} command(s)`)
+      parts.push(t('notifications.failedImportCommands', { count: errorCount }))
     }
 
-    const message = parts.length > 0 ? parts.join('\n') : 'Import completed: No changes made.'
+    const message = parts.length > 0 ? parts.join('\n') : t('notifications.importNoChanges')
 
     if (successCount > 0 || replacedCount > 0) {
-      alert('Import Successful!\n\n' + message)
+      alert(`${t('notifications.importSuccessfulTitle')}\n\n${message}`)
     } else if (errorCount > 0) {
-      alert('Import Failed!\n\n' + message)
+      alert(`${t('notifications.importFailedTitle')}\n\n${message}`)
     } else {
       alert(message)
     }
@@ -680,7 +686,7 @@ const processImport = async (commandsToAdd: ImportCommand[], idsToReplace: numbe
     pendingImportCommands.value = []
   } catch (error) {
     console.error('Import processing error:', error)
-    alert('Import failed: ' + (error instanceof Error ? error.message : String(error)))
+    alert(t('notifications.importFailedWithError', { error: error instanceof Error ? error.message : String(error) }))
   }
 }
 
@@ -689,7 +695,10 @@ const handleBulkDelete = async (ids: number[]) => {
   if (ids.length === 0) return
 
   const confirmDelete = confirm(
-    `Are you sure you want to delete ${ids.length} command${ids.length > 1 ? 's' : ''}?\n\nThis action cannot be undone.`
+    t('notifications.bulkDeleteConfirmDetail', {
+      count: ids.length,
+      plural: ids.length > 1 ? 's' : '',
+    })
   )
 
   if (!confirmDelete) return
@@ -708,14 +717,17 @@ const handleBulkDelete = async (ids: number[]) => {
     // Show notification
     if (successCount > 0) {
       showNotificationToast(
-        `Deleted ${successCount} command${successCount > 1 ? 's' : ''}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`
+        t('notifications.commandsDeleted', {
+          count: successCount,
+          plural: successCount > 1 ? 's' : '',
+        }) + (errorCount > 0 ? ` (${errorCount} failed)` : '')
       )
     } else {
-      showNotificationToast('Failed to delete commands')
+      showNotificationToast(t('notifications.failedDeleteCommands'))
     }
   } catch (error) {
     console.error('Bulk delete error:', error)
-    showNotificationToast('Failed to delete commands')
+    showNotificationToast(t('notifications.failedDeleteCommands'))
   }
 }
 
@@ -733,15 +745,18 @@ const handleBulkExport = async (ids: number[]) => {
       // Write file
       const writeResult = await window.electronAPI.file.writeFile(result.filePath, content)
       if (writeResult.success) {
-        showNotificationToast(`Exported ${selectedCommands.length} command${selectedCommands.length > 1 ? 's' : ''}`)
+        showNotificationToast(t('notifications.exportedCommands', {
+          count: selectedCommands.length,
+          plural: selectedCommands.length > 1 ? 's' : '',
+        }))
       } else {
         console.error('Export failed:', writeResult.error)
-        showNotificationToast('Failed to save export file')
+        showNotificationToast(t('notifications.failedSaveExport'))
       }
     }
   } catch (error) {
     console.error('Bulk export error:', error)
-    showNotificationToast('Export failed')
+    showNotificationToast(t('notifications.exportFailed'))
   }
 }
 
@@ -750,24 +765,23 @@ const deleteCommand = async (id: number) => {
   const selectedCommand = commands.value.find(cmd => cmd.id === id)
   if (!selectedCommand) return
   // Confirm deletion
-  const confirmDelete = confirm(`Are you sure you want to delete the command: "${selectedCommand.title}"?\n\nThis action 
-  cannot be undone.`)
+  const confirmDelete = confirm(t('notifications.deleteConfirmDetail', { title: selectedCommand.title }))
   if (!confirmDelete) return
   // Call the API to delete the command
   try {
     const result = await window.electronAPI.library.deleteCommand(id)
     if (result.success) {
-      showNotificationToast('Command deleted')
+      showNotificationToast(t('notifications.commandDeleted'))
       // refresh the command list and clear selection
       await loadCommands()
       selectedCommandId.value = null
     } else {
       console.error('Failed to delete command:', result.error)
-      showNotificationToast('Failed to delete command')
+      showNotificationToast(t('notifications.failedDeleteCommand'))
     }
   } catch (error) {
     console.error('Error deleting command:', error)
-    showNotificationToast('Failed to delete command')
+    showNotificationToast(t('notifications.failedDeleteCommand'))
   }
 }
   // Command editing functions
@@ -788,27 +802,27 @@ const deleteCommand = async (id: number) => {
         const result = await window.electronAPI.library.updateCommand(selectedCommandForEdit.value.id,
   formData)
         if (result.success) {
-          showNotificationToast('Command updated')
+          showNotificationToast(t('notifications.commandUpdated'))
           await loadCommands()
         } else {
           console.error('Failed to update command:', result.error)
-          showNotificationToast('Failed to update command')
+          showNotificationToast(t('notifications.failedUpdateCommand'))
         }
       } else {
         // Add new command
         const result = await window.electronAPI.library.createCommand(formData)
         if (result.success) {
-          showNotificationToast('Command added')
+          showNotificationToast(t('notifications.commandAdded'))
           await loadCommands()
         } else {
           console.error('Failed to add command:', result.error)
-          showNotificationToast('Failed to add command')
+          showNotificationToast(t('notifications.failedAddCommand'))
         }
       }
       showModal.value = false
     } catch (error) {
       console.error('Error saving command:', error)
-      showNotificationToast('Failed to save command')
+      showNotificationToast(t('notifications.saveFailed'))
     }
   }
   // Handle modal cancel
@@ -1023,7 +1037,7 @@ const openDescriptionModal = (title: string, description: string) => {
         <div class="search-wrapper">
           <input type="text"
             ref="searchInputRef"
-            placeholder="search commands..."
+            :placeholder="$t('app.searchPlaceholder')"
             v-model="searchQuery"
             @keydown="handleSearchKeyDown"
             @focus="selectedCommandId = null"
@@ -1032,7 +1046,7 @@ const openDescriptionModal = (title: string, description: string) => {
           <button
             @click="toggleFilterDropdown"
             :class="['filter-button', { active: selectedTags.length > 0, open: showFilterDropdown }]"
-            title="Filter by tags"
+            :title="$t('app.filterByTags')"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
@@ -1054,24 +1068,24 @@ const openDescriptionModal = (title: string, description: string) => {
 
       <!-- Right section: Control buttons -->
       <div class="right-section">
-        <button class="add-button" @click="modalMode = 'add'; selectedCommandForEdit = null; showModal = true" title="Add new command (n)">
+        <button class="add-button" @click="modalMode = 'add'; selectedCommandForEdit = null; showModal = true" :title="$t('app.addCommandTitle')">
           <CirclePlus :size="18" />
         </button>
-        <button class="help-button" @click="showHelpModal = true" title="Help">
+        <button class="help-button" @click="showHelpModal = true" :title="$t('app.helpTitle')">
           <HelpCircle :size="16" />
         </button>
-        <button class="settings-button" @click="showSettingsModal = true" title="Settings">
+        <button class="settings-button" @click="showSettingsModal = true" :title="$t('app.settingsTitle')">
           <Settings :size="18" />
         </button>
 
         <!-- Windows window controls -->
         <div v-if="isWindows" class="window-controls">
-          <button class="window-control-btn minimize-btn" @click="minimizeWindow" title="Minimize">
+          <button class="window-control-btn minimize-btn" @click="minimizeWindow" :title="$t('app.minimize')">
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
             </svg>
           </button>
-          <button class="window-control-btn maximize-btn" @click="maximizeWindow" :title="isMaximized ? 'Restore' : 'Maximize'">
+          <button class="window-control-btn maximize-btn" @click="maximizeWindow" :title="isMaximized ? $t('app.restore') : $t('app.maximize')">
             <svg v-if="!isMaximized" width="12" height="12" viewBox="0 0 12 12">
               <rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
@@ -1080,7 +1094,7 @@ const openDescriptionModal = (title: string, description: string) => {
               <rect x="0" y="2" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
           </button>
-          <button class="window-control-btn close-btn-window" @click="closeWindow" title="Close">
+          <button class="window-control-btn close-btn-window" @click="closeWindow" :title="$t('app.close')">
             <svg width="12" height="12" viewBox="0 0 12 12">
               <path d="M 1,1 L 11,11 M 11,1 L 1,11" stroke="currentColor" stroke-width="1.5"/>
             </svg>
@@ -1137,13 +1151,13 @@ const openDescriptionModal = (title: string, description: string) => {
               </div>
             </div>
             <div class="command-actions">
-              <button @click.stop="copyCommand(command)" tabindex="-1" title="Copy command">
+              <button @click.stop="copyCommand(command)" tabindex="-1" :title="$t('app.copyCommand')">
                 <Copy :size="16" />
               </button>
-              <button @click.stop="editCommand(command.id)" tabindex="-1" title="Edit command">
+              <button @click.stop="editCommand(command.id)" tabindex="-1" :title="$t('app.editCommand')">
                 <Edit :size="16" />
               </button>
-              <button @click.stop="deleteCommand(command.id)" tabindex="-1" title="Delete command">
+              <button @click.stop="deleteCommand(command.id)" tabindex="-1" :title="$t('app.deleteCommand')">
                 <Trash2 :size="16" />
               </button>
             </div>
@@ -1158,11 +1172,10 @@ const openDescriptionModal = (title: string, description: string) => {
     <!-- First-run library setup -->
     <div v-if="showFirstRunSetup" class="first-run-overlay">
       <div class="first-run-card">
-        <div class="first-run-badge">First run</div>
-        <h2>Choose a default writable library</h2>
+        <div class="first-run-badge">{{ $t('app.firstRun') }}</div>
+        <h2>{{ $t('app.chooseDefaultLibrary') }}</h2>
         <p>
-          SnipForge needs one local folder to own your command files. Pick a folder now and
-          the app will create <code>.snipforge.json</code> there if needed.
+          {{ $t('app.firstRunDescription', { manifest: '.snipforge.json' }) }}
         </p>
         <p v-if="firstRunSetupError" class="first-run-error">{{ firstRunSetupError }}</p>
         <button
@@ -1170,10 +1183,10 @@ const openDescriptionModal = (title: string, description: string) => {
           :disabled="firstRunSetupLoading"
           @click="handleChooseDefaultWritableLibrary"
         >
-          {{ firstRunSetupLoading ? 'Choosing...' : 'Choose Folder' }}
+          {{ firstRunSetupLoading ? $t('app.choosing') : $t('app.chooseFolder') }}
         </button>
         <p class="first-run-note">
-          This setup is required before you start adding commands.
+          {{ $t('app.firstRunRequired') }}
         </p>
       </div>
     </div>

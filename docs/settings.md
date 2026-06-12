@@ -124,6 +124,21 @@ Unblocks parked ideas (tag pills, preview on copy). All in the General tab.
 - `src/App.vue` — tag pills rendering (`.tag-pill`), preview on copy toast, `matchAction()` + `matchesShortcut()` replace hardcoded key checks in `handleKeyboard`
 - `src/components/SettingsModal.vue` — Display section (toggle switches), Keyboard Shortcuts section (shortcut table with click-to-rebind, conflict detection, reset)
 
+### Language Setting / i18n (2026-06-12)
+
+SnipForge now has a first-party renderer i18n layer and a persisted language preference.
+
+Delivered:
+- [x] Added `general.language` with `system`, `en`, and `zh-CN` options
+- [x] Added a language selector to Settings → General → Display
+- [x] Registered `vue-i18n` in the renderer and applied language changes through the settings store
+- [x] Localized the main palette, common modals, settings high-traffic paths, library list, update banner, notifications, confirms, alerts, and common placeholders
+
+Implementation notes:
+- `system` follows `navigator.language`; Chinese system locales resolve to Simplified Chinese, other locales resolve to English
+- User-authored command content, tags, library data, paths, repository URLs, shortcut strings, and code language identifiers are intentionally not translated
+- Deeper dynamic Git workflow detail text remains a future polish area where translating aggressively could obscure troubleshooting output
+
 ### Phase 4: Libraries UX Refinement (planned)
 
 The Libraries tab and Library Management workspace are functionally strong, but the current presentation gets visually crowded once management is active. This phase is about sharpening that workflow for daily use as an internal dev tool: focused, practical, and still pleasant.

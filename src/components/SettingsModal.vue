@@ -9,21 +9,21 @@
             :class="{ active: activeTab === 'general' }"
             @click="activeTab = 'general'"
           >
-            General
+            {{ $t('settings.tabs.general') }}
           </button>
           <button
             class="tab-button"
             :class="{ active: activeTab === 'connectors' }"
             @click="activeTab = 'connectors'"
           >
-            Connectors
+            {{ $t('settings.tabs.connectors') }}
           </button>
           <button
             class="tab-button"
             :class="{ active: activeTab === 'libraries' }"
             @click="activeTab = 'libraries'"
           >
-            Libraries
+            {{ $t('settings.tabs.libraries') }}
           </button>
         </div>
         <button class="close-button" @click="$emit('cancel')">×</button>
@@ -35,15 +35,15 @@
         <div v-if="activeTab === 'general'" class="general-tab">
           <!-- Updates -->
           <div class="settings-section">
-            <h3>Updates</h3>
+            <h3>{{ $t('settings.updates.title') }}</h3>
             <div class="update-compact-row">
               <div class="update-left">
                 <span class="update-version">v{{ updateStatus.currentVersion || '...' }}</span>
                 <span v-if="updateStatus.updateAvailable" class="update-available">
-                  — v{{ updateStatus.latestVersion }} available
+                  — {{ $t('settings.updates.available', { version: updateStatus.latestVersion }) }}
                 </span>
                 <span v-else-if="updateStatus.lastChecked" class="update-up-to-date">
-                  — up to date
+                  — {{ $t('settings.updates.upToDate') }}
                 </span>
               </div>
               <button
@@ -51,12 +51,12 @@
                 @click="manualCheckForUpdate"
                 :disabled="updateChecking"
               >
-                {{ updateChecking ? 'Checking...' : 'Check for updates' }}
+                {{ updateChecking ? $t('settings.updates.checking') : $t('settings.updates.check') }}
               </button>
             </div>
             <div class="toggle-row">
               <div class="toggle-label">
-                <span class="toggle-title">Check automatically</span>
+                <span class="toggle-title">{{ $t('settings.updates.auto') }}</span>
               </div>
               <button
                 class="toggle-switch"
@@ -71,9 +71,9 @@
           </div>
 
           <div class="settings-section">
-            <h3>Global Hotkey</h3>
+            <h3>{{ $t('settings.hotkey.title') }}</h3>
             <p class="section-description">
-              Keyboard shortcut to show/hide SnipForge from anywhere.
+              {{ $t('settings.hotkey.description') }}
             </p>
             <div class="hotkey-picker">
               <button
@@ -84,7 +84,7 @@
                 @blur="cancelHotkeyCapture"
               >
                 <span v-if="hotkeyListening" class="hotkey-listening-text">
-                  Press a key combo...
+                  {{ $t('settings.hotkey.listening') }}
                 </span>
                 <span v-else class="hotkey-keys">{{ formatHotkeyDisplay(currentHotkey) }}</span>
               </button>
@@ -96,11 +96,26 @@
 
           <!-- Display Settings -->
           <div class="settings-section">
-            <h3>Display</h3>
+            <h3>{{ $t('settings.display.title') }}</h3>
             <div class="toggle-row">
               <div class="toggle-label">
-                <span class="toggle-title">Tag pills</span>
-                <span class="toggle-desc">Show tags as pills on commands in the list</span>
+                <span class="toggle-title">{{ $t('settings.display.language') }}</span>
+                <span class="toggle-desc">{{ $t('settings.display.languageDesc') }}</span>
+              </div>
+              <select class="setting-select" :value="currentLanguage" @change="handleLanguageChange">
+                <option
+                  v-for="option in languageOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ $t(option.labelKey) }}
+                </option>
+              </select>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-label">
+                <span class="toggle-title">{{ $t('settings.display.tagPills') }}</span>
+                <span class="toggle-desc">{{ $t('settings.display.tagPillsDesc') }}</span>
               </div>
               <button
                 class="toggle-switch"
@@ -114,8 +129,8 @@
             </div>
             <div class="toggle-row">
               <div class="toggle-label">
-                <span class="toggle-title">Preview on copy</span>
-                <span class="toggle-desc">Show a snippet of the copied text in the notification</span>
+                <span class="toggle-title">{{ $t('settings.display.previewOnCopy') }}</span>
+                <span class="toggle-desc">{{ $t('settings.display.previewOnCopyDesc') }}</span>
               </div>
               <button
                 class="toggle-switch"
@@ -131,9 +146,9 @@
 
           <!-- Keyboard Shortcuts -->
           <div class="settings-section">
-            <h3>Keyboard Shortcuts</h3>
+            <h3>{{ $t('settings.shortcuts.title') }}</h3>
             <p class="section-description">
-              Click a shortcut to rebind it. Press Escape to cancel.
+              {{ $t('settings.shortcuts.description') }}
             </p>
             <div class="shortcuts-table">
               <div
@@ -150,7 +165,7 @@
                   @blur="cancelShortcutCapture"
                 >
                   <span v-if="shortcutListeningAction === action.id" class="shortcut-listening-text">
-                    Press a key...
+                    {{ $t('settings.shortcuts.listening') }}
                   </span>
                   <span v-else>{{ formatShortcutDisplay(currentShortcuts[action.id]) }}</span>
                 </button>
@@ -165,7 +180,7 @@
                 @click="resetShortcuts"
                 :disabled="!hasCustomShortcuts"
               >
-                Reset to defaults
+                {{ $t('settings.shortcuts.reset') }}
               </button>
             </div>
           </div>
@@ -175,9 +190,9 @@
         <!-- Tab 2: Connectors -->
         <div v-if="activeTab === 'connectors'" class="connectors-tab">
           <div class="settings-section" style="border-bottom: none;">
-            <h3>Connected Services</h3>
+            <h3>{{ $t('settings.connectors.title') }}</h3>
             <p class="section-description">
-              External services that SnipForge can sync with.
+              {{ $t('settings.connectors.description') }}
             </p>
 
             <div class="connector-list">
@@ -199,7 +214,7 @@
                   <span v-if="authStatus.authenticated" class="connector-status connected">
                     @{{ authStatus.user?.login }}
                   </span>
-                  <span v-else class="connector-status">Not connected</span>
+                  <span v-else class="connector-status">{{ $t('settings.connectors.notConnected') }}</span>
                 </div>
                 <div class="connector-action">
                   <!-- Authenticated: disconnect -->
@@ -208,7 +223,7 @@
                     @click="handleLogout"
                     class="connector-button disconnect"
                   >
-                    Disconnect
+                    {{ $t('settings.connectors.disconnect') }}
                   </button>
                   <!-- Not authenticated: connect flow -->
                   <button
@@ -217,7 +232,7 @@
                     class="connector-button connect"
                     :disabled="deviceFlow.loading"
                   >
-                    {{ deviceFlow.loading ? 'Starting...' : 'Connect' }}
+                    {{ deviceFlow.loading ? $t('settings.connectors.starting') : $t('settings.connectors.connect') }}
                   </button>
                 </div>
               </div>
@@ -225,11 +240,11 @@
               <!-- Device Flow inline (shown when connecting) -->
               <div v-if="!authStatus.authenticated && deviceFlow.active && !deviceFlow.completed" class="connector-device-flow">
                 <p class="device-flow-instruction">
-                  Open the link below and enter this code:
+                  {{ $t('settings.connectors.deviceInstruction') }}
                 </p>
                 <div class="device-code-display">
                   <code class="device-code">{{ deviceFlow.userCode }}</code>
-                  <button @click="copyDeviceCode" class="copy-code-button" title="Copy code">
+                  <button @click="copyDeviceCode" class="copy-code-button" :title="$t('settings.connectors.copyCode')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -237,13 +252,13 @@
                   </button>
                 </div>
                 <button @click="openVerificationUrl" class="verification-link-button">
-                  Open github.com/login/device
+                  {{ $t('settings.connectors.openDevice') }}
                 </button>
                 <p class="device-flow-status">
                   <span class="spinner"></span>
-                  Waiting for authorization...
+                  {{ $t('settings.connectors.waiting') }}
                 </p>
-                <button @click="cancelLogin" class="cancel-auth-button">Cancel</button>
+                <button @click="cancelLogin" class="cancel-auth-button">{{ $t('common.cancel') }}</button>
               </div>
             </div>
 
@@ -287,9 +302,9 @@
             <!-- Section header: title + sync all -->
             <div class="section-header-row section-header-row--libraries">
               <div>
-                <h3>Libraries</h3>
+                <h3>{{ $t('settings.libraries.title') }}</h3>
                 <p class="section-description section-description--compact">
-                  Add working copies, choose the default writable folder, and open a focused management workspace when you need to clean up commands.
+                  {{ $t('settings.libraries.descriptionDetailed') }}
                 </p>
               </div>
               <div class="section-header-actions">
@@ -304,7 +319,7 @@
                     <polyline points="1 20 1 14 7 14"></polyline>
                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                   </svg>
-                  {{ syncing ? 'Syncing...' : 'Sync All' }}
+                  {{ syncing ? $t('settings.libraries.syncing') : $t('settings.libraries.syncAll') }}
                 </button>
               </div>
             </div>
@@ -312,7 +327,7 @@
             <div class="libraries-overview-bar">
               <div class="auto-sync-row auto-sync-row--panel">
                 <div class="auto-sync-left">
-                  <span class="auto-sync-label">Auto-sync</span>
+                  <span class="auto-sync-label">{{ $t('settings.libraries.autoSync') }}</span>
                   <button
                     class="toggle-switch toggle-switch--small"
                     :class="{ on: autoSyncEnabled }"
@@ -323,24 +338,24 @@
                     <span class="toggle-knob" />
                   </button>
                 </div>
-                <span class="last-synced-text">Last synced: {{ lastSyncedDisplay }}</span>
+                <span class="last-synced-text">{{ $t('settings.libraries.lastSynced', { time: lastSyncedDisplay }) }}</span>
               </div>
 
               <div class="libraries-stats-grid">
                 <div class="library-stat-chip">
-                  <span class="library-stat-chip__label">Libraries</span>
+                  <span class="library-stat-chip__label">{{ $t('settings.libraries.title') }}</span>
                   <strong>{{ libraries.length }}</strong>
                 </div>
                 <div class="library-stat-chip">
-                  <span class="library-stat-chip__label">Initialized</span>
+                  <span class="library-stat-chip__label">{{ $t('settings.libraries.initialized') }}</span>
                   <strong>{{ initializedLibrariesCount }}</strong>
                 </div>
                 <div class="library-stat-chip">
-                  <span class="library-stat-chip__label">Writable</span>
+                  <span class="library-stat-chip__label">{{ $t('settings.libraries.writable') }}</span>
                   <strong>{{ writableLibrariesCount }}</strong>
                 </div>
                 <div class="library-stat-chip">
-                  <span class="library-stat-chip__label">Commands</span>
+                  <span class="library-stat-chip__label">{{ $t('settings.libraries.commands') }}</span>
                   <strong>{{ totalLibraryCommands }}</strong>
                 </div>
               </div>
@@ -348,15 +363,15 @@
 
             <div class="default-library-row">
               <div class="default-library-copy">
-                <span class="default-library-label">Default writable library</span>
+                <span class="default-library-label">{{ $t('settings.libraries.defaultWritable') }}</span>
                 <span v-if="defaultWritableLibrary" class="default-library-value">
                   {{ defaultWritableLibrary.name }} · {{ defaultWritableLibrary.type === 'local' ? shortenPath(defaultWritableLibrary.github_repo) : defaultWritableLibrary.github_repo }}
                 </span>
                 <span v-else class="default-library-value muted">
-                  Not configured yet
+                  {{ $t('settings.libraries.notConfigured') }}
                 </span>
                 <span class="section-description">
-                  SnipForge remembers this local folder as the default writable library.
+                  {{ $t('settings.libraries.defaultDesc') }}
                 </span>
               </div>
               <button
@@ -364,7 +379,7 @@
                 @click="handleChooseDefaultWritableLibrary"
                 :disabled="defaultLibraryPicking"
               >
-                {{ defaultLibraryPicking ? 'Choosing...' : defaultWritableLibrary ? 'Change Folder' : 'Choose Folder' }}
+                {{ defaultLibraryPicking ? $t('settings.libraries.choosing') : defaultWritableLibrary ? $t('settings.libraries.changeFolder') : $t('app.chooseFolder') }}
               </button>
             </div>
             <p v-if="defaultLibraryError" class="library-error">{{ defaultLibraryError }}</p>
@@ -372,9 +387,9 @@
             <!-- Add library controls -->
             <div class="library-intake-panel">
               <div class="library-intake-copy">
-                <span class="default-library-label">Add a library</span>
+                <span class="default-library-label">{{ $t('settings.libraries.addLibrary') }}</span>
                 <p class="section-description section-description--compact">
-                  Open a local folder for direct editing, or subscribe to a GitHub-backed repo when you want to track a shared source.
+                  {{ $t('settings.libraries.addLibraryDesc') }}
                 </p>
               </div>
               <div class="add-library-row">
@@ -384,7 +399,7 @@
                     v-model="newRepoUrl"
                     type="text"
                     class="repo-input"
-                    placeholder="owner/repo or GitHub URL"
+                    :placeholder="$t('settings.libraries.subscribePlaceholder')"
                     @keydown.enter="handleSubscribe"
                     :disabled="subscribing"
                   />
@@ -393,11 +408,11 @@
                     class="subscribe-button"
                     :disabled="subscribing || !newRepoUrl.trim()"
                   >
-                    {{ subscribing ? 'Adding...' : 'Subscribe' }}
+                    {{ subscribing ? $t('settings.libraries.adding') : $t('settings.libraries.subscribe') }}
                   </button>
                 </div>
                 <div v-else class="subscribe-disabled-hint">
-                  Connect GitHub in the Connectors tab to subscribe to remote libraries.
+                  {{ $t('settings.libraries.connectHint') }}
                 </div>
                 <!-- Open local folder -->
                 <button
@@ -408,7 +423,7 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                   </svg>
-                  Open Folder
+                  {{ $t('settings.libraries.openFolder') }}
                 </button>
               </div>
             </div>
@@ -441,12 +456,12 @@
                     <span
                       v-if="defaultWritableLibrary?.id === lib.id"
                       class="library-role-badge default"
-                    >Default</span>
+                    >{{ $t('settings.libraries.default') }}</span>
                     <span
                       v-if="lib.type === 'github' && (lib.permission === 'owner' || lib.permission === 'curator')"
                       class="library-role-badge"
                       :class="lib.permission"
-                    >{{ lib.permission === 'owner' ? 'Owner' : 'Curator' }}</span>
+                    >{{ lib.permission === 'owner' ? $t('settings.libraries.owner') : $t('settings.libraries.curator') }}</span>
                     <button
                       v-if="lib.manifest_path"
                       class="toggle-switch toggle-switch--small"
@@ -454,20 +469,20 @@
                       @click.stop="handleToggleLibraryAutoSync(lib)"
                       role="switch"
                       :aria-checked="lib.auto_sync === 1"
-                      :title="lib.auto_sync === 1 ? 'Disable auto-sync' : 'Enable auto-sync'"
+                      :title="lib.auto_sync === 1 ? $t('settings.libraries.disableAutoSync') : $t('settings.libraries.enableAutoSync')"
                     >
                       <span class="toggle-knob" />
                     </button>
                   </div>
                   <span class="library-repo" :title="lib.github_repo">{{ lib.type === 'local' ? shortenPath(lib.github_repo) : lib.github_repo }}</span>
                   <span v-if="lib.manifest_path" class="library-command-count">
-                    {{ getLibraryCommandCount(lib.id) }} command{{ getLibraryCommandCount(lib.id) !== 1 ? 's' : '' }}
+                    {{ $t('settings.libraries.commandCount', { count: getLibraryCommandCount(lib.id), plural: getLibraryCommandCount(lib.id) !== 1 ? 's' : '' }) }}
                   </span>
                   <span v-if="!lib.manifest_path" class="library-status not-initialized">
-                    Not initialized
+                    {{ $t('settings.libraries.notInitialized') }}
                   </span>
                   <span v-else-if="lib.last_synced_at" class="library-synced">
-                    Last synced: {{ formatSyncTime(lib.last_synced_at) }}
+                    {{ $t('settings.libraries.lastSynced', { time: formatSyncTime(lib.last_synced_at) }) }}
                   </span>
                 </div>
                 <div class="library-actions">
@@ -476,24 +491,24 @@
                       @click="openInitModal(lib)"
                       class="library-action-btn init"
                       :disabled="initializing"
-                      title="Initialize as SnipForge library"
+                      :title="$t('settings.libraries.initialize')"
                     >
-                      Init
+                      {{ $t('settings.libraries.init') }}
                     </button>
                   </template>
                   <template v-else>
                     <button
                       @click="openLibraryManagement(lib.id)"
                       class="library-action-btn manage"
-                      title="Manage library commands"
+                      :title="$t('settings.libraries.manageCommands')"
                     >
-                      Manage
+                      {{ $t('settings.libraries.manage') }}
                     </button>
                   </template>
                   <button
                     @click="handleRemoveLibrary(lib)"
                     class="library-action-btn danger"
-                    :title="lib.type === 'local' ? 'Remove' : 'Unsubscribe'"
+                    :title="lib.type === 'local' ? $t('settings.libraries.remove') : $t('settings.libraries.unsubscribe')"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -504,8 +519,8 @@
               </div>
             </div>
             <div v-else class="empty-libraries">
-              <p>No libraries yet.</p>
-              <p class="section-description">Open a local folder or subscribe to a GitHub repo.</p>
+              <p>{{ $t('settings.libraries.emptyTitle') }}</p>
+              <p class="section-description">{{ $t('settings.libraries.emptyDesc') }}</p>
             </div>
 
             <!-- Sync result notification -->
@@ -521,10 +536,11 @@
     <!-- Library Picker Modal -->
     <div v-if="libraryPicker.visible" class="init-modal-overlay" @click.self="closeLibraryPicker">
       <div class="init-modal" style="width: 420px;">
-        <h3>Choose a Library</h3>
+        <h3>{{ $t('settings.libraries.chooseLibrary') }}</h3>
         <p class="init-modal-repo">
-          {{ libraryPicker.type === 'local' ? 'This folder has' : 'This repo has' }}
-          {{ libraryPicker.libraries.length }} libraries
+          {{ libraryPicker.type === 'local'
+            ? $t('settings.libraries.folderHasLibraries', { count: libraryPicker.libraries.length })
+            : $t('settings.libraries.repoHasLibraries', { count: libraryPicker.libraries.length }) }}
         </p>
         <div class="picker-list">
           <button
@@ -536,13 +552,13 @@
             <div class="picker-item-name">{{ lib.name }}</div>
             <div class="picker-item-meta">
               <span class="picker-item-path">{{ lib.path || '/' }}</span>
-              <span class="picker-item-count">{{ lib.commandCount }} command{{ lib.commandCount !== 1 ? 's' : '' }}</span>
+              <span class="picker-item-count">{{ $t('settings.libraries.commandCount', { count: lib.commandCount, plural: lib.commandCount !== 1 ? 's' : '' }) }}</span>
             </div>
             <div v-if="lib.description" class="picker-item-desc">{{ lib.description }}</div>
           </button>
         </div>
         <div class="init-modal-actions">
-          <button @click="closeLibraryPicker" class="init-modal-cancel">Cancel</button>
+          <button @click="closeLibraryPicker" class="init-modal-cancel">{{ $t('common.cancel') }}</button>
         </div>
       </div>
     </div>
@@ -550,10 +566,10 @@
     <!-- Init Library Modal -->
     <div v-if="initModal.visible" class="init-modal-overlay" @click.self="closeInitModal">
       <div class="init-modal" @click="locationOpen = false">
-        <h3>Initialize Library</h3>
+        <h3>{{ $t('settings.libraries.initialize') }}</h3>
         <p class="init-modal-repo">{{ initModal.repo }}</p>
         <div class="init-modal-field">
-          <label>Name</label>
+          <label>{{ $t('settings.libraries.name') }}</label>
           <input
             v-model="initModal.name"
             type="text"
@@ -563,24 +579,24 @@
           />
         </div>
         <div class="init-modal-field">
-          <label>Description</label>
+          <label>{{ $t('settings.libraries.descriptionField') }}</label>
           <input
             v-model="initModal.description"
             type="text"
             class="init-modal-input"
-            placeholder="Optional description"
+            :placeholder="$t('settings.libraries.optionalDescription')"
             @keydown.enter="handleInitLibrary"
           />
         </div>
         <div v-if="initModal.type !== 'local'" class="init-modal-field">
-          <label>Location <span class="field-hint">(where to create .snipforge.json)</span></label>
+          <label>{{ $t('settings.libraries.location') }} <span class="field-hint">{{ $t('settings.libraries.locationHint') }}</span></label>
           <div class="location-combobox" @click.stop>
             <div class="location-input-wrap">
               <input
                 v-model="initModal.subpath"
                 type="text"
                 class="init-modal-input location-input"
-                placeholder="repository root"
+                :placeholder="$t('settings.libraries.repositoryRoot')"
                 @focus="handleLocationFocus"
               />
               <button
@@ -601,20 +617,20 @@
                 {{ folder }}
               </li>
               <li v-if="initModal.foldersLoading" class="loading-item">
-                Loading folders...
+                {{ $t('settings.libraries.loadingFolders') }}
               </li>
             </ul>
           </div>
         </div>
         <p v-if="initModal.error" class="init-modal-error">{{ initModal.error }}</p>
         <div class="init-modal-actions">
-          <button @click="closeInitModal" class="init-modal-cancel">Cancel</button>
+          <button @click="closeInitModal" class="init-modal-cancel">{{ $t('common.cancel') }}</button>
           <button
             @click="handleInitLibrary"
             class="init-modal-confirm"
             :disabled="initializing || !initModal.name.trim()"
           >
-            {{ initializing ? 'Creating...' : 'Create' }}
+            {{ initializing ? $t('settings.libraries.creating') : $t('settings.libraries.create') }}
           </button>
         </div>
       </div>
@@ -622,12 +638,12 @@
     <!-- Export as Library Modal -->
     <div v-if="exportLibraryModal.visible" class="init-modal-overlay" @click.self="closeExportLibraryModal">
       <div class="init-modal">
-        <h3>Export as Library</h3>
+        <h3>{{ $t('settings.libraries.exportAsLibrary') }}</h3>
         <p class="init-modal-repo">
-          {{ exportLibraryModal.commandCount }} command{{ exportLibraryModal.commandCount !== 1 ? 's' : '' }} will be exported
+          {{ $t('settings.libraries.commandsWillExport', { count: exportLibraryModal.commandCount, plural: exportLibraryModal.commandCount !== 1 ? 's' : '' }) }}
         </p>
         <div class="init-modal-field">
-          <label>Library Name</label>
+          <label>{{ $t('settings.libraries.libraryName') }}</label>
           <input
             v-model="exportLibraryModal.name"
             type="text"
@@ -637,24 +653,24 @@
           />
         </div>
         <div class="init-modal-field">
-          <label>Description</label>
+          <label>{{ $t('settings.libraries.descriptionField') }}</label>
           <input
             v-model="exportLibraryModal.description"
             type="text"
             class="init-modal-input"
-            placeholder="Optional description"
+            :placeholder="$t('settings.libraries.optionalDescription')"
             @keydown.enter="handleExportLibrary"
           />
         </div>
         <p v-if="exportLibraryModal.error" class="init-modal-error">{{ exportLibraryModal.error }}</p>
         <div class="init-modal-actions">
-          <button @click="closeExportLibraryModal" class="init-modal-cancel">Cancel</button>
+          <button @click="closeExportLibraryModal" class="init-modal-cancel">{{ $t('common.cancel') }}</button>
           <button
             @click="handleExportLibrary"
             class="init-modal-confirm"
             :disabled="exportLibraryModal.exporting || !exportLibraryModal.name.trim()"
           >
-            {{ exportLibraryModal.exporting ? 'Exporting...' : 'Export' }}
+            {{ exportLibraryModal.exporting ? $t('settings.libraries.exporting') : $t('common.export') }}
           </button>
         </div>
       </div>
@@ -667,8 +683,10 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { filterCommandsByTags, getAllTags, matchesTagFilter } from '../utils/tags'
 import { getInlineSuggestion } from '../utils/autocomplete'
 import { useSettings } from '../composables/useSettings'
+import { LANGUAGE_SETTING_OPTIONS, type LanguageSetting } from '../i18n'
 import LibraryManagementModal from './LibraryManagementModal.vue'
 import TagSelector from './TagSelector.vue'
+import { useI18n } from 'vue-i18n'
 import type {
   Library,
   AuthStatus,
@@ -698,6 +716,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
 // Emits
 const emit = defineEmits<{
@@ -715,6 +734,15 @@ const activeTab = ref<Tab>('general')
 
 // ── Settings ───────────────────────────────────────────────────
 const { settings, updateSetting, loaded: settingsLoaded } = useSettings()
+const languageOptions = LANGUAGE_SETTING_OPTIONS
+const currentLanguage = computed(() => {
+  const value = settings.value['general.language']
+  return value === 'en' || value === 'zh-CN' || value === 'system' ? value : 'system'
+})
+
+function handleLanguageChange(event: Event) {
+  updateSetting('general.language', (event.target as HTMLSelectElement).value as LanguageSetting)
+}
 
 // ── Update Status ───────────────────────────────────────────────
 type StatusWithBanner = UpdateStatus & { showBanner: boolean }
@@ -831,9 +859,9 @@ async function saveHotkey(accelerator: string) {
   const result = await updateSetting('general.hotkey', accelerator)
   if (result.success) {
     currentHotkey.value = accelerator
-    showHotkeyFeedback('Hotkey updated', 'success')
+    showHotkeyFeedback(t('settings.feedback.hotkeyUpdated'), 'success')
   } else {
-    showHotkeyFeedback(result.error || 'Failed to set hotkey', 'error')
+    showHotkeyFeedback(result.error || t('settings.feedback.hotkeyFailed'), 'error')
   }
 }
 
@@ -855,15 +883,15 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
   'action.delete': 'Backspace',
 }
 
-const shortcutActions = [
-  { id: 'navigate.up', label: 'Navigate up' },
-  { id: 'navigate.down', label: 'Navigate down' },
-  { id: 'action.copy', label: 'Copy command' },
-  { id: 'action.copyTemplate', label: 'Copy template' },
-  { id: 'action.new', label: 'New command' },
-  { id: 'action.edit', label: 'Edit command' },
-  { id: 'action.delete', label: 'Delete command' },
-]
+const shortcutActions = computed(() => [
+  { id: 'navigate.up', label: t('settings.shortcuts.actions.navigateUp') },
+  { id: 'navigate.down', label: t('settings.shortcuts.actions.navigateDown') },
+  { id: 'action.copy', label: t('settings.shortcuts.actions.copy') },
+  { id: 'action.copyTemplate', label: t('settings.shortcuts.actions.copyTemplate') },
+  { id: 'action.new', label: t('settings.shortcuts.actions.new') },
+  { id: 'action.edit', label: t('settings.shortcuts.actions.edit') },
+  { id: 'action.delete', label: t('settings.shortcuts.actions.delete') },
+])
 
 const currentShortcuts = computed(() => {
   const stored = settings.value['shortcuts'] as Record<string, string> | undefined
@@ -951,8 +979,8 @@ function captureShortcut(event: KeyboardEvent, actionId: string) {
     ([id, b]) => id !== actionId && b.toLowerCase() === binding.toLowerCase()
   )
   if (conflict) {
-    const conflictLabel = shortcutActions.find(a => a.id === conflict[0])?.label || conflict[0]
-    showShortcutFeedback(`Already used by "${conflictLabel}"`, 'error')
+    const conflictLabel = shortcutActions.value.find(a => a.id === conflict[0])?.label || conflict[0]
+    showShortcutFeedback(t('settings.feedback.shortcutConflict', { label: conflictLabel }), 'error')
     shortcutListeningAction.value = null
     return
   }
@@ -965,16 +993,16 @@ async function saveShortcut(actionId: string, binding: string) {
   const updated = { ...currentShortcuts.value, [actionId]: binding }
   const result = await updateSetting('shortcuts', updated)
   if (result.success) {
-    showShortcutFeedback('Shortcut updated', 'success')
+    showShortcutFeedback(t('settings.feedback.shortcutUpdated'), 'success')
   } else {
-    showShortcutFeedback(result.error || 'Failed to save', 'error')
+    showShortcutFeedback(result.error || t('settings.feedback.shortcutFailed'), 'error')
   }
 }
 
 async function resetShortcuts() {
   const result = await updateSetting('shortcuts', { ...DEFAULT_SHORTCUTS })
   if (result.success) {
-    showShortcutFeedback('Shortcuts reset to defaults', 'success')
+    showShortcutFeedback(t('settings.feedback.shortcutsReset'), 'success')
   }
 }
 
@@ -1274,18 +1302,20 @@ async function handleOpenLibraryPullRequest() {
 // ── Auto-Sync State ───────────────────────────────────────────
 const autoSyncEnabled = ref(false)
 const lastSyncedTimestamp = ref<string | null>(null)
-const lastSyncedDisplay = ref('Never')
+const lastSyncedDisplay = ref(t('common.never'))
 let lastSyncedTimer: ReturnType<typeof setInterval> | null = null
 let autoSyncCleanup: (() => void) | null = null
 
 // Compute relative time display from timestamp
 function updateLastSyncedDisplay() {
   if (!lastSyncedTimestamp.value) {
-    lastSyncedDisplay.value = 'Never'
+    lastSyncedDisplay.value = t('common.never')
     return
   }
   lastSyncedDisplay.value = formatSyncTime(lastSyncedTimestamp.value)
 }
+
+watch(() => settings.value['general.language'], updateLastSyncedDisplay)
 
 async function toggleAutoSync() {
   const newValue = !autoSyncEnabled.value
@@ -1323,13 +1353,13 @@ function setupAutoSyncListener() {
       }
       const total = totalAdded + totalUpdated + totalRemoved
       if (total === 0) {
-        syncMessage.value = 'Auto-sync: all up to date.'
+        syncMessage.value = t('settings.libraries.autoSyncUpToDate')
       } else {
         const parts: string[] = []
-        if (totalAdded) parts.push(`${totalAdded} added`)
-        if (totalUpdated) parts.push(`${totalUpdated} updated`)
-        if (totalRemoved) parts.push(`${totalRemoved} removed`)
-        syncMessage.value = `Auto-sync: ${parts.join(', ')}`
+        if (totalAdded) parts.push(t('settings.libraries.added', { count: totalAdded }))
+        if (totalUpdated) parts.push(t('settings.libraries.updated', { count: totalUpdated }))
+        if (totalRemoved) parts.push(t('settings.libraries.removed', { count: totalRemoved }))
+        syncMessage.value = t('settings.libraries.autoSyncPrefix', { summary: parts.join(', ') })
       }
       syncMessageType.value = 'success'
       emit('libraries-changed')
@@ -1846,13 +1876,13 @@ async function handleSyncAll() {
       }
       const total = totalAdded + totalUpdated + totalRemoved
       if (total === 0 && errors.length === 0) {
-        syncMessage.value = 'All libraries up to date.'
+        syncMessage.value = t('settings.libraries.allUpToDate')
       } else {
         const parts: string[] = []
-        if (totalAdded) parts.push(`${totalAdded} added`)
-        if (totalUpdated) parts.push(`${totalUpdated} updated`)
-        if (totalRemoved) parts.push(`${totalRemoved} removed`)
-        syncMessage.value = parts.length ? `Synced: ${parts.join(', ')}` : ''
+        if (totalAdded) parts.push(t('settings.libraries.added', { count: totalAdded }))
+        if (totalUpdated) parts.push(t('settings.libraries.updated', { count: totalUpdated }))
+        if (totalRemoved) parts.push(t('settings.libraries.removed', { count: totalRemoved }))
+        syncMessage.value = parts.length ? t('settings.libraries.syncedPrefix', { summary: parts.join(', ') }) : ''
         if (errors.length) {
           libraryError.value = errors.join('; ')
         }
@@ -1861,7 +1891,7 @@ async function handleSyncAll() {
       emit('libraries-changed')
       clearSyncMessage()
     } else {
-      libraryError.value = result.error || 'Sync failed'
+      libraryError.value = result.error || t('settings.libraries.syncFailed')
     }
   } catch (e) {
     libraryError.value = (e as Error).message
@@ -1876,12 +1906,12 @@ function formatSyncTime(iso: string): string {
     const now = new Date()
     const diff = now.getTime() - d.getTime()
     const minutes = Math.floor(diff / 60000)
-    if (minutes < 1) return 'just now'
-    if (minutes < 60) return `${minutes}m ago`
+    if (minutes < 1) return t('settings.libraries.justNow')
+    if (minutes < 60) return t('settings.libraries.minutesAgo', { count: minutes })
     const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
+    if (hours < 24) return t('settings.libraries.hoursAgo', { count: hours })
     const days = Math.floor(hours / 24)
-    return `${days}d ago`
+    return t('settings.libraries.daysAgo', { count: days })
   } catch {
     return iso
   }
@@ -2800,6 +2830,28 @@ const closeAllDropdowns = () => {
 .toggle-desc {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.setting-select {
+  min-width: 170px;
+  padding: 8px 36px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-select:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-surface);
+}
+
+.setting-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 /* Shortcuts table */
