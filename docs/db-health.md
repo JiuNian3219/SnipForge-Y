@@ -14,6 +14,19 @@ Light and non-intrusive. This is not a database management framework — it's a 
 
 ## DB Test Recovery
 
+### Issue TBD: restore local validation baseline under pnpm 11
+
+Plan:
+- declare TipTap packages that are imported directly by the rich text editor so strict TypeScript does not depend on transitive dependency visibility
+- refresh pnpm build-script approval for the native/runtime packages needed by local verification
+- verify the baseline with `vue-tsc --noEmit` and the Vitest suite, including SQLite/local-library coverage
+
+Final notes:
+- `@tiptap/core` and `@tiptap/pm` are now direct dependencies because `RichTextEditor.vue` imports them directly
+- pnpm 11 build-script approval is pinned in the workspace config for `better-sqlite3`, `electron`, and `lzma-native`, while `esbuild` stays ignored
+- Vitest's timeout is now 30 seconds so Windows git-backed local-library workflow tests are not killed by the default 5-second limit
+- verification passed with `pnpm exec vue-tsc --noEmit`, `pnpm test`, and `pnpm test:db`
+
 ### Issue #27: restore runnable DB tests after Node ABI/native module drift
 
 Plan:
