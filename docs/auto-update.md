@@ -108,7 +108,7 @@ interface UpdateStatus {
 
 ### Renderer
 
-- `UpdateBanner.vue`: bottom banner component in `App.vue`
+- `src/components/domain/shell/UpdateBanner.vue`: bottom banner component in `App.vue`
 - Conditional render based on update status + dismissal state
 - "update" button calls `shell:openExternal` with `https://snipforge.dev`
 - "remind me later" button calls `update:remindLater`

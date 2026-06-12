@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import type { UpdateStatus } from '../../shared/types'
+import BaseButton from '../../ui/BaseButton.vue'
+import type { UpdateStatus } from '../../../../shared/types'
 
 type StatusWithBanner = UpdateStatus & { showBanner: boolean }
 
@@ -23,7 +24,6 @@ onMounted(async () => {
     console.warn('[UpdateBanner] Failed to get status:', e)
   }
 
-  // Listen for push updates from main process
   cleanupListener = (window.electronAPI as any).update.onStatusChanged((data: StatusWithBanner) => {
     status.value = data
   })
@@ -57,8 +57,12 @@ async function handleRemindLater() {
   <Transition name="update-banner">
     <div v-if="status.showBanner" class="update-banner">
       <span class="update-text">{{ $t('updateBanner.text') }}</span>
-      <button class="update-btn" @click="handleUpdate">{{ $t('updateBanner.update') }}</button>
-      <button class="remind-btn" @click="handleRemindLater">{{ $t('updateBanner.remindLater') }}</button>
+      <BaseButton class="update-action" variant="subtle" size="sm" @click="handleUpdate">
+        {{ $t('updateBanner.update') }}
+      </BaseButton>
+      <BaseButton class="remind-action" variant="subtle" size="sm" @click="handleRemindLater">
+        {{ $t('updateBanner.remindLater') }}
+      </BaseButton>
     </div>
   </Transition>
 </template>
@@ -81,38 +85,19 @@ async function handleRemindLater() {
   font-style: italic;
 }
 
-.update-btn {
-  background: none;
-  border: none;
+.update-action {
   color: var(--accent);
-  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  padding: 2px 8px;
-  border-radius: 4px;
-  transition: background 0.15s;
 }
 
-.update-btn:hover {
-  background: var(--accent-glow);
-}
-
-.remind-btn {
-  background: none;
-  border: none;
+.remind-action {
   color: var(--text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 8px;
-  border-radius: 4px;
-  transition: color 0.15s;
 }
 
-.remind-btn:hover {
+.remind-action:hover {
   color: var(--text-secondary);
 }
 
-/* Transition */
 .update-banner-enter-active,
 .update-banner-leave-active {
   transition: all 0.3s ease;

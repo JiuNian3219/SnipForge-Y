@@ -22,7 +22,9 @@ SnipForge/
 ├── shared/
 │   └── types.ts                     # Shared TypeScript interfaces (all processes import from here)
 ├── src/
-│   ├── components/                  # Vue components (see below)
+│   ├── components/                  # Vue components (ui primitives, domain components, and legacy flat components)
+│   │   ├── ui/                      # Business-agnostic primitives
+│   │   └── domain/                  # SnipForge-specific components grouped by domain
 │   ├── utils/                       # Pure utility modules (see below)
 │   ├── assets/
 │   │   └── help.md                  # In-app help content (rendered in HelpModal)
@@ -60,6 +62,12 @@ SnipForge/
 
 ### Vue Components (`src/components/`)
 
+The renderer now has two component layers:
+
+- `src/components/ui/` contains reusable primitives. These components use SnipForge CSS variables but do not import command, library, settings, or Electron domain code.
+- `src/components/domain/` contains SnipForge-specific components. Domain components may compose `ui/` primitives and may know about app workflows.
+- Large legacy components such as `SettingsModal.vue` and `LibraryManagementModal.vue` remain in the flat `src/components/` directory until they can be migrated safely.
+
 | Component | Purpose | Uses IPC? |
 |-----------|---------|-----------|
 | `CommandModal.vue` | Add/Edit command: language dropdown, tag autocomplete, routes to appropriate editor | No (emits to App.vue) |
@@ -67,10 +75,11 @@ SnipForge/
 | `MarkdownEditor.vue` | CodeMirror 6 markdown editor with Bold/Italic/Link toolbar | No |
 | `RichTextEditor.vue` | TipTap WYSIWYG (bold, lists, tasks, links, images) | No |
 | `SettingsModal.vue` | Settings surface for connectors, libraries, shortcuts, and library-scoped management/origin workflows | Yes: `auth.*`, `library.*`, `file.*` |
-| `DescriptionModal.vue` | Read-only markdown renderer for command descriptions | Yes: `shell.openExternal` |
-| `VariableInputModal.vue` | Dynamic form for `{{variable}}` placeholders before copy | No (emits to App.vue) |
-| `HelpModal.vue` | Renders `help.md` as sanitized HTML | No |
-| `DuplicateResolutionModal.vue` | Import conflict resolution: skip vs replace | No (emits to App.vue) |
+| `domain/shell/DescriptionModal.vue` | Read-only markdown renderer for command descriptions | Yes: `shell.openExternal` |
+| `domain/commands/VariableInputModal.vue` | Dynamic form for `{{variable}}` placeholders before copy | No (emits to App.vue) |
+| `domain/shell/HelpModal.vue` | Renders `help.md` as sanitized HTML | No |
+| `domain/commands/DuplicateResolutionModal.vue` | Import conflict resolution: skip vs replace | No (emits to App.vue) |
+| `domain/shell/UpdateBanner.vue` | Bottom update notification banner | Yes: `update.*`, `shell.openExternal` |
 | `CommandList.vue` | Virtualized checkbox list used in library-scoped command management flows | No |
 | `TagSelector.vue` | Searchable tag picker with type-ahead filter | No |
 
@@ -109,9 +118,9 @@ SnipForge/
 │  App.vue ─── calls electronAPI.database/clipboard│
 │    ├── CommandModal ─── emits save ──► App.vue   │
 │    ├── SettingsModal ── calls auth/library/file   │
-│    ├── VariableInputModal ── emits values         │
-│    ├── DescriptionModal ── calls shell            │
-│    └── HelpModal, TagSelector, etc. (no IPC)     │
+│    ├── domain/commands/VariableInputModal emits values │
+│    ├── domain/shell/DescriptionModal calls shell       │
+│    └── domain/shell/HelpModal, TagSelector, etc.       │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -232,7 +241,7 @@ Final notes:
 
 | Channel | Preload Method | Called From |
 |---------|---------------|-------------|
-| `shell:openExternal` | `shell.openExternal()` | DescriptionModal link clicks |
+| `shell:openExternal` | `shell.openExternal()` | domain/shell/DescriptionModal link clicks |
 | `dialog:showInputDialog` | `dialog.showInputDialog()` | Available (superseded by VariableInputModal) |
 | `window-shown` *(push)* | `onWindowShown(cb) => cleanup` | App.vue — resets UI on hotkey |
 

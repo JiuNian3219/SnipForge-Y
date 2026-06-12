@@ -60,7 +60,7 @@ The variable regex now only matches **plain names** (letters, numbers, spaces, h
 | File | Purpose |
 |------|---------|
 | `src/utils/variables.ts` | Core logic: extraction, substitution, detection, highlighting |
-| `src/components/VariableInputModal.vue` | Dynamic form modal — one input field per variable |
+| `src/components/domain/commands/VariableInputModal.vue` | Dynamic form modal — one input field per variable |
 | `src/App.vue` | Copy flow orchestration, keyboard shortcuts, preview rendering |
 
 ### `src/utils/variables.ts`
@@ -76,7 +76,7 @@ Four functions, all using the same regex pattern:
 
 **Variable regex:** `/\{\{(\s*[a-zA-Z0-9][a-zA-Z0-9 _-]*\s*)\}\}/g` — matches only plain names, ignores Go/Handlebars/Mustache template syntax.
 
-### `src/components/VariableInputModal.vue`
+### `src/components/domain/commands/VariableInputModal.vue`
 
 - Receives `variables: string[]` as a prop (from `extractVariables()`)
 - Creates a reactive `values` object keyed by variable name
