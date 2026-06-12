@@ -10,7 +10,7 @@ import DescriptionModal from './components/DescriptionModal.vue'
 import TagSelector from './components/TagSelector.vue'
 import DuplicateResolutionModal from './components/DuplicateResolutionModal.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
-import { Copy, Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus } from 'lucide-vue-next'
+import { Edit, Trash2, HelpCircle, Settings, Anvil, CirclePlus } from 'lucide-vue-next'
 import { VList } from 'virtua/vue'
 import { extractVariables, substituteVariables, hasVariables, highlightVariables, type VariableValues } from './utils/variables'
 import { useSettings } from './composables/useSettings'
@@ -437,6 +437,11 @@ const copyToClipboard = async (text: string, language: string = 'plaintext') => 
     console.error('Error copying command to clipboard:', error)
     showNotificationToast(t('notifications.copyFailed'))
   }
+}
+
+const handleCommandClick = (command: Command) => {
+  selectedCommandId.value = command.id
+  copyCommand(command)
 }
 
 // Variable for storing language of pending command
@@ -1116,7 +1121,7 @@ const openDescriptionModal = (title: string, description: string) => {
             class="command-item"
             :class="{'selected': selectedCommandId === command.id}"
             :tabindex="selectedCommandId === command.id || (selectedCommandId === null && index === 0) ? 0 : -1"
-            @click="selectedCommandId = command.id"
+            @click="handleCommandClick(command)"
             @focus="selectedCommandId = command.id"
           >
             <div class="command-content">
@@ -1151,9 +1156,6 @@ const openDescriptionModal = (title: string, description: string) => {
               </div>
             </div>
             <div class="command-actions">
-              <button @click.stop="copyCommand(command)" tabindex="-1" :title="$t('app.copyCommand')">
-                <Copy :size="16" />
-              </button>
               <button @click.stop="editCommand(command.id)" tabindex="-1" :title="$t('app.editCommand')">
                 <Edit :size="16" />
               </button>
